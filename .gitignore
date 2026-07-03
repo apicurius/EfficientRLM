@@ -1,0 +1,34 @@
+# EfficientRLM top-level ignores (upstream rlm/ and prime-rl/ keep their own .gitignore too)
+
+# secrets — never commit
+.env
+*.env
+!*.env.example
+!.env.example
+*.key
+*.pem
+
+# run outputs / experiment artifacts
+outputs/
+wandb/
+runs/
+checkpoints/
+*.ckpt
+*.safetensors
+*.pt
+
+# python / build / caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.uv/
+
+# editors / OS
+.DS_Store
+.idea/
+.vscode/
