@@ -45,6 +45,14 @@ class SubprocessReplBackend(ReplBackend):
         env["RLM_TRAIN_ROLLOUT_ID"] = rollout_id
         env["RLM_TRAIN_DEPTH"] = str(depth)
         env.setdefault("PYTHONUNBUFFERED", "1")
+        # The parent smoke runner may enable the repo's sitecustomize-based
+        # Weave hook via WEAVE_PROJECT/PYTHONPATH.  Do not inherit that into the
+        # per-rollout REPL worker: sitecustomize runs before this module emits
+        # its JSON "_init" handshake, and weave.init() can spend >30s on network
+        # auth/setup, causing WorkerStartupError.  Sub-LLM calls are proxied
+        # through the parent env process, so tracing the REPL worker itself is
+        # unnecessary.
+        env.pop("WEAVE_PROJECT", None)
 
         self._proc = await asyncio.create_subprocess_exec(
             self._python,
