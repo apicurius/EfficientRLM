@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 from collections.abc import Callable
 from typing import Any
@@ -34,6 +35,21 @@ class RLMTrainRubric(vf.Rubric):
         self.add_metric(self.rlm_iterations)
         self.add_metric(self.rlm_repl_calls)
         self.add_metric(self.rlm_sub_llm_calls)
+        self.add_metric(self.rlm_sub_llm_tokens)
+        self.add_metric(self.rlm_sub_llm_usage_missing)
+        self.add_metric(self.rlm_sub_llm_prompt_attempts)
+        self.add_metric(self.rlm_sub_llm_prompt_rejections)
+        self.add_metric(self.rlm_sub_llm_prompt_chars_max)
+        self.add_metric(self.rlm_sub_llm_prompt_est_tokens_max)
+        self.add_metric(self.rlm_sub_llm_prompt_rejected_chars_max)
+        self.add_metric(self.rlm_sub_llm_prompt_rejected_est_tokens_max)
+        self.add_metric(self.rlm_root_prompt_chars_max)
+        self.add_metric(self.rlm_root_prompt_est_tokens_max)
+        self.add_metric(self.rlm_root_prompt_windowed)
+        self.add_metric(self.rlm_root_prompt_over_budget)
+        self.add_metric(self.rlm_root_prompt_chars_after_window_max)
+        self.add_metric(self.rlm_root_prompt_est_tokens_after_window_max)
+        self.add_metric(self.rlm_root_prompt_omitted_messages_max)
         self.add_metric(self.rlm_has_final_answer)
         self.add_metric(self.rlm_below_min_iterations)
         self.add_metric(self.rlm_below_min_subcall)
@@ -49,6 +65,31 @@ class RLMTrainRubric(vf.Rubric):
         return True
 
     async def _call_correctness(
+        self, correctness: Callable[..., float], kwargs: dict[str, Any]
+    ) -> float:
+        # correctness may be a stochastic LLM judge: reward funcs and metrics that
+        # each invoke it independently can disagree in sign for the same rollout
+        # (observed 9/328 on browsecomp-plus), and training consumes the metric.
+        # Memoize the in-flight invocation in the per-rollout state so every caller
+        # awaits the same single judge sample. The task is cached (not just the
+        # value) because rubric funcs may run concurrently; once resolved it is
+        # replaced by the plain float to keep state serializable.
+        state = kwargs.get("state")
+        if not isinstance(state, dict):
+            return await self._invoke_correctness(correctness, kwargs)
+        cache = state.setdefault("_rlm_correctness_cache", {})
+        key = id(correctness)
+        cached = cache.get(key)
+        if isinstance(cached, float):
+            return cached
+        if cached is None:
+            cached = asyncio.ensure_future(self._invoke_correctness(correctness, kwargs))
+            cache[key] = cached
+        value = float(await cached)
+        cache[key] = value
+        return value
+
+    async def _invoke_correctness(
         self, correctness: Callable[..., float], kwargs: dict[str, Any]
     ) -> float:
         result = correctness(**kwargs)
@@ -97,6 +138,50 @@ class RLMTrainRubric(vf.Rubric):
 
     async def rlm_sub_llm_calls(self, state: State) -> int:
         return int(state.get("rlm_sub_llm_calls") or 0)
+
+    async def rlm_sub_llm_tokens(self, state: State) -> int:
+        return int(state.get("rlm_sub_llm_tokens") or 0)
+
+    async def rlm_sub_llm_usage_missing(self, state: State) -> int:
+        return int(state.get("rlm_sub_llm_usage_missing") or 0)
+    async def rlm_sub_llm_prompt_attempts(self, state: State) -> int:
+        return int(state.get("rlm_sub_llm_prompt_attempts") or 0)
+
+    async def rlm_sub_llm_prompt_rejections(self, state: State) -> int:
+        return int(state.get("rlm_sub_llm_prompt_rejections") or 0)
+
+    async def rlm_sub_llm_prompt_chars_max(self, state: State) -> int:
+        return int(state.get("rlm_sub_llm_prompt_chars_max") or 0)
+
+    async def rlm_sub_llm_prompt_est_tokens_max(self, state: State) -> int:
+        return int(state.get("rlm_sub_llm_prompt_est_tokens_max") or 0)
+
+    async def rlm_sub_llm_prompt_rejected_chars_max(self, state: State) -> int:
+        return int(state.get("rlm_sub_llm_prompt_rejected_chars_max") or 0)
+
+    async def rlm_sub_llm_prompt_rejected_est_tokens_max(self, state: State) -> int:
+        return int(state.get("rlm_sub_llm_prompt_rejected_est_tokens_max") or 0)
+
+    async def rlm_root_prompt_chars_max(self, state: State) -> int:
+        return int(state.get("rlm_root_prompt_chars_max") or 0)
+
+    async def rlm_root_prompt_est_tokens_max(self, state: State) -> int:
+        return int(state.get("rlm_root_prompt_est_tokens_max") or 0)
+
+    async def rlm_root_prompt_windowed(self, state: State) -> int:
+        return int(state.get("rlm_root_prompt_windowed") or 0)
+
+    async def rlm_root_prompt_over_budget(self, state: State) -> int:
+        return int(state.get("rlm_root_prompt_over_budget") or 0)
+
+    async def rlm_root_prompt_chars_after_window_max(self, state: State) -> int:
+        return int(state.get("rlm_root_prompt_chars_after_window_max") or 0)
+
+    async def rlm_root_prompt_est_tokens_after_window_max(self, state: State) -> int:
+        return int(state.get("rlm_root_prompt_est_tokens_after_window_max") or 0)
+
+    async def rlm_root_prompt_omitted_messages_max(self, state: State) -> int:
+        return int(state.get("rlm_root_prompt_omitted_messages_max") or 0)
 
     async def rlm_has_final_answer(self, state: State) -> int:
         return 1 if state.get("rlm_final_answer") else 0
