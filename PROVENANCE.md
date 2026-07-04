@@ -25,6 +25,12 @@ was built on, minus the local modifications — so this is the same baseline, ve
   document it here.
 - Record every deviation from upstream in this file (component, commit, what, why).
 
+## Deviations from upstream
+
+| Component | What | Why |
+|---|---|---|
+| `rlm/rlm/utils/prompts.py` | 3 budget hunks (user-directed, 2026-07-04): ORCHESTRATOR_ADDENDUM per-prompt ceiling "~100K characters" → "~12K tokens (roughly 36K–48K characters)"; brute-force heuristic "~20 × 100K chars" → "~20 × 12K-token chunks"; metadata line "~100k tokens at once" → "keep under ~12k tokens". Byte-identical to the fork the live A/B run trained on. | The training scaffold (`rlm/training/src/rlm_train/proxy.py`) rejects sub-prompts above 12k estimated tokens / 36k chars; upstream's capacity claims steer the policy into deterministic rejections (reject-loop). Prompt guidance must match enforcement. |
+
 ## Repository layout
 
 This is a **single vendored git repository** (the two upstreams' nested `.git`

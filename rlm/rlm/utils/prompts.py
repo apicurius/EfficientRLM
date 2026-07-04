@@ -180,9 +180,10 @@ ORCHESTRATOR_ADDENDUM = "\n\n".join(
             "Sub-call budget is finite on two independent axes, and `llm_query_batched` only "
             "parallelizes — it does not relax either. (1) Per-prompt capacity: a single "
             "sub-call answers well only when its input stays modestly sized — a useful rough "
-            "ceiling is ~100K characters per prompt, less when the text is dense. Pack each "
-            "prompt close to that capacity (a chunk of many items, a whole document) so one "
-            "call accomplishes a lot of work. (2) Per-batch fan-out: `llm_query_batched` "
+            "ceiling is ~12K tokens per prompt (roughly 36K–48K characters, less when the "
+            "text is dense) so there is room for output. Pack each prompt close to that "
+            "capacity (a chunk of many items, a whole document) so one call accomplishes a "
+            "lot of work. (2) Per-batch fan-out: `llm_query_batched` "
             "concurrency is bounded too — a useful rough ceiling is ~20 prompts per batch. "
             "Tiny-prompt mega-batches (hundreds or thousands of single-item prompts) are the "
             "anti-pattern; fat-prompt small batches are correct. For many independent units, "
@@ -192,7 +193,7 @@ ORCHESTRATOR_ADDENDUM = "\n\n".join(
             "prefer batched — same total work, far fewer turns burned. After Python-side "
             "filtering has narrowed the candidate set, batch-extract the survivors rather "
             "than reading them by hand. If the raw workload exceeds both budgets at once "
-            "(e.g. a context far larger than ~20 × 100K chars), don't brute-force it: "
+            "(e.g. a context far larger than ~20 × 12K-token chunks), don't brute-force it: "
             "filter aggressively in Python first to a tractable subset, or stage the task — "
             "a cheap coarse pass narrows candidates, then a targeted second pass extracts "
             "from the survivors."
@@ -232,7 +233,8 @@ def build_rlm_system_prompt(
     metadata_body = (
         f"Your context is a {query_metadata.context_type} of "
         f"{query_metadata.context_total_length} total characters. "
-        "Each sub-LLM call can handle roughly ~100k tokens at once."
+        "Keep each sub-LLM prompt under roughly ~12k tokens "
+        "(about 36k-48k characters, depending on text density) so there is room for output."
     )
     if root_prompt:
         metadata_prompt = f"Answer the following: {root_prompt}\n\n{metadata_body}"

@@ -8,9 +8,6 @@ user_prologue = """BrowseComp-Plus environment notes:
   large chunk batches into REPL output.
 - Print only compact diagnostics: counts, short samples, candidate answers, and
   final evidence.
-- Sub-LLM prompts are hard-capped at about 12k estimated tokens (~36k chars);
-  over-budget calls are rejected. Never send the whole multi-document context
-  in one call.
 - First use Python keyword/regex filtering over `context` to pick a small
   candidate set; then use `llm_query_batched` on focused prompts (one evidence
   chunk per prompt) and aggregate compact results in Python.
