@@ -1,0 +1,30 @@
+"""Text fed to the root model: env notes prologue + question instruction."""
+
+user_prologue = """BrowseComp-Plus environment notes:
+- The evidence documents are available in the REPL variable `context`: a Python
+  list of chunk strings (a shuffled mix of gold, supporting, and hard-negative
+  document chunks), each starting with a provenance header like
+  `[BrowseComp+ doc 7 chunk 2/5]`. Do not print, paste, or echo raw chunks or
+  large chunk batches into REPL output.
+- Print only compact diagnostics: counts, short samples, candidate answers, and
+  final evidence.
+- Sub-LLM prompts are hard-capped at about 12k estimated tokens (~36k chars);
+  over-budget calls are rejected. Never send the whole multi-document context
+  in one call.
+- First use Python keyword/regex filtering over `context` to pick a small
+  candidate set; then use `llm_query_batched` on focused prompts (one evidence
+  chunk per prompt) and aggregate compact results in Python.
+- Keep the final answer short: a single succinct answer string with no
+  explanation, confidence, or extra commentary (an independent LLM judge
+  compares it directly to the gold answer).
+- Even if evidence is incomplete, submit your best succinct answer; rollouts
+  without a final answer score 0.
+- When ready, set `answer["content"]` to ONLY the final answer and then
+  `answer["ready"] = True`.
+"""
+
+QUESTION_INSTRUCTION = (
+    "The context contains evidence document chunks: a shuffled mix of "
+    "gold-relevant, supporting, and hard-negative documents for a deep-research "
+    "query. Answer the following query using the evidence in `context`."
+)
