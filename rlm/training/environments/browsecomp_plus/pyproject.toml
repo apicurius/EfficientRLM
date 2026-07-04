@@ -1,14 +1,13 @@
 [project]
-name = "oolong"
+name = "browsecomp_plus"
 version = "0.1.0"
-description = "OOLONG synth long-context QA (eval-suite port) via RLMTrainEnv, with source-traced user prologue."
+description = "BrowseComp-Plus evidence-document deep-research QA (eval-suite port) via RLMTrainEnv."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "rlm-train",
     "verifiers>=0.1.11.dev0",
     "datasets>=4.0",
-    "python-dateutil",
 ]
 
 [tool.uv.sources]
@@ -19,7 +18,7 @@ requires = ["hatchling>=1.24"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["oolong"]
+packages = ["browsecomp_plus"]
 
 [project.entry-points."verifiers.environments"]
-oolong = "oolong:load_environment"
+browsecomp_plus = "browsecomp_plus:load_environment"

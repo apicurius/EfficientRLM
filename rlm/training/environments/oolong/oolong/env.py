@@ -16,6 +16,61 @@ from datasets import Dataset, load_dataset
 COMPARISON_PHRASES = ("more common than", "less common than", "same frequency as")
 
 
+user_prologue = """OOLONG environment notes:
+- The OOLONG context is available in the REPL variable `context`; do not print,
+  paste, or echo raw context or large chunks into REPL output.
+- Print only compact diagnostics: counts, short samples, candidate values, and
+  final evidence.
+- For semantic long-context retrieval or aggregation, split the context into
+  chunky windows, use `llm_query_batched`, and aggregate compact results in
+  Python.
+- Keep final answers short: a single token / word / date / label / comparison
+  phrase / integer as required by the question.
+- When ready, set `answer["content"]` to ONLY the final answer and then
+  `answer["ready"] = True`.
+"""
+
+
+def _build_rubric(
+    correctness: Any,
+    *,
+    min_iterations: int,
+    min_subcall: int,
+    max_iterations: int,
+    shaping_coef: float = 0.0,
+    correct_threshold: float = 1.0,
+    subcall_budget: float = 0.0,
+    token_budget: float = 0.0,
+    iteration_weight: float = 1.0,
+    subcall_weight: float = 1.0,
+    token_weight: float = 1.0,
+    reward_style: str = "auto",
+    turn_penalty_min_turns: int = 20,
+    turn_penalty_max: float = 0.02,
+    resource_penalty_max: float = 0.02,
+    trajectory_answer_recall: Any = None,
+) -> vf.Rubric:
+    return rlm_train.make_reward_rubric(
+        correctness=correctness,
+        weight=1.0,
+        min_iterations=min_iterations,
+        min_subcall=min_subcall,
+        max_iterations=max_iterations,
+        reward_style=reward_style,
+        shaping_coef=shaping_coef,
+        correct_threshold=correct_threshold,
+        subcall_budget=subcall_budget,
+        token_budget=token_budget,
+        iteration_weight=iteration_weight,
+        subcall_weight=subcall_weight,
+        token_weight=token_weight,
+        turn_penalty_min_turns=turn_penalty_min_turns,
+        turn_penalty_max=turn_penalty_max,
+        resource_penalty_max=resource_penalty_max,
+        trajectory_answer_recall=trajectory_answer_recall,
+    )
+
+
 def _find_comparison_phrase(output: str) -> str | None:
     out_low = output.lower()
     hits = [(out_low.rfind(p), p) for p in COMPARISON_PHRASES if p in out_low]
@@ -77,6 +132,54 @@ async def _score(info, state: vf.State, **_kw: Any) -> float:
     final = state.get("rlm_final_answer") or state.get("final_answer") or ""
     meta = json.loads(info) if isinstance(info, str) else info
     return _synth_score(meta, final)
+
+
+def _gold_surface_forms(meta: dict) -> list[str]:
+    """Gold answer rendered as the short surface strings a rollout would print."""
+
+    answer = str(meta.get("answer", ""))
+    forms: set[str] = set()
+    raw = answer.strip()
+    if raw:
+        forms.add(raw)
+    try:
+        if "datetime" in answer:
+            parsed: Any = datetime.strptime(answer, "[datetime.date(%Y, %m, %d)]")
+            forms.add(parsed.date().isoformat())
+        else:
+            val = ast.literal_eval(answer)
+            if isinstance(val, (list, tuple)) and val:
+                forms.add(str(val[0]))
+            else:
+                forms.add(str(val))
+    except Exception:
+        pass
+    return [f.lower() for f in forms if f and len(f) <= 64]
+
+
+async def _trajectory_answer_recall(info, state: vf.State, **_kw: Any) -> float:
+    """Harness-1 ``rho_tauA``: did the gold answer surface *anywhere* in the
+    trajectory, even if the final answer was wrong or never promoted?
+
+    This reads the compact REPL-stdout digest accumulated by ``RLMTrainEnv``
+    (telemetry only). It credits discovery separately from final selection, so
+    a rollout that computed the right value mid-trajectory but botched
+    finalization is no longer indistinguishable from one that never found it.
+    """
+
+    # If the final answer is already correct, trajectory-answer recall is 1.0.
+    meta = json.loads(info) if isinstance(info, str) else info
+    final = state.get("rlm_final_answer") or state.get("final_answer") or ""
+    if _synth_score(meta, final) >= 1.0:
+        return 1.0
+    digest = str(state.get("rlm_trajectory_text") or "")
+    if not digest:
+        return 0.0
+    digest_low = digest.lower()
+    for form in _gold_surface_forms(meta):
+        if form in digest_low:
+            return 1.0
+    return 0.0
 
 
 _QUESTION_INSTRUCTION = (
@@ -158,6 +261,18 @@ def load_environment(
     sub_max_tokens: int = 4096,
     min_iterations: int = 2,
     min_subcall: int = 1,
+    user_prologue: str | None = user_prologue,
+    shaping_coef: float = 0.0,
+    correct_threshold: float = 1.0,
+    subcall_budget: float = 0.0,
+    token_budget: float = 0.0,
+    iteration_weight: float = 1.0,
+    subcall_weight: float = 1.0,
+    token_weight: float = 1.0,
+    reward_style: str = "auto",
+    turn_penalty_min_turns: int = 20,
+    turn_penalty_max: float = 0.02,
+    resource_penalty_max: float = 0.02,
     **kwargs: Any,
 ) -> vf.Environment:
     dataset = _build_dataset(
@@ -168,19 +283,32 @@ def load_environment(
         seed=seed,
         exclude_numeric=exclude_numeric,
     )
-    rubric = rlm_train.RLMTrainRubric(
-        correctness=_score,
-        weight=1.0,
+    rubric = _build_rubric(
+        _score,
         min_iterations=min_iterations,
         min_subcall=min_subcall,
+        max_iterations=max_iterations,
+        shaping_coef=shaping_coef,
+        correct_threshold=correct_threshold,
+        subcall_budget=subcall_budget,
+        token_budget=token_budget,
+        iteration_weight=iteration_weight,
+        subcall_weight=subcall_weight,
+        token_weight=token_weight,
+        reward_style=reward_style,
+        turn_penalty_min_turns=turn_penalty_min_turns,
+        turn_penalty_max=turn_penalty_max,
+        resource_penalty_max=resource_penalty_max,
+        trajectory_answer_recall=_trajectory_answer_recall,
     )
     return rlm_train.RLMTrainEnv(
         dataset=dataset,
         max_iterations=max_iterations,
         sub_sampling_args={"max_tokens": sub_max_tokens},
         rubric=rubric,
+        user_prologue=user_prologue,
         **kwargs,
     )
 
 
-__all__ = ["load_environment"]
+__all__ = ["load_environment", "user_prologue"]
