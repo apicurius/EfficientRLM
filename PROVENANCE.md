@@ -19,10 +19,12 @@ was built on, minus the local modifications — so this is the same baseline, ve
 
 ## Rules
 
-- **Never modify `prime-rl/` source in place.** Treatment/behavior changes go through the
-  per-environment advantage hook, environment config, or wrappers/env vars. If a trainer
-  change is unavoidable, keep it as a named, committed patch on top of `v0.6.1.dev14` and
-  document it here.
+- **`prime-rl/` is frozen — no modifications, period** (owner decision 2026-07-04).
+  Treatment/behavior changes go through the per-environment advantage hook, environment
+  config, or wrappers/env vars only.
+- **Core `rlm/` (outside `rlm/training/`) is frozen** with exactly ONE accepted deviation:
+  the prompt budget adaptation in `rlm/rlm/utils/prompts.py` (see table below). No further
+  core changes are accepted.
 - Record every deviation from upstream in this file (component, commit, what, why).
 
 ## Deviations from upstream
