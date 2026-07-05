@@ -43,43 +43,6 @@ _QUESTION_INSTRUCTION = (
 )
 
 
-def _build_rubric(
-    correctness: Any,
-    *,
-    min_iterations: int,
-    min_subcall: int,
-    max_iterations: int,
-    shaping_coef: float = 0.0,
-    correct_threshold: float = 1.0,
-    subcall_budget: float = 0.0,
-    token_budget: float = 0.0,
-    iteration_weight: float = 1.0,
-    subcall_weight: float = 1.0,
-    token_weight: float = 1.0,
-    reward_style: str = "auto",
-    turn_penalty_min_turns: int = 20,
-    turn_penalty_max: float = 0.02,
-    resource_penalty_max: float = 0.02,
-) -> vf.Rubric:
-    return rlm_train.make_reward_rubric(
-        correctness=correctness,
-        weight=1.0,
-        min_iterations=min_iterations,
-        min_subcall=min_subcall,
-        max_iterations=max_iterations,
-        reward_style=reward_style,
-        shaping_coef=shaping_coef,
-        correct_threshold=correct_threshold,
-        subcall_budget=subcall_budget,
-        token_budget=token_budget,
-        iteration_weight=iteration_weight,
-        subcall_weight=subcall_weight,
-        token_weight=token_weight,
-        turn_penalty_min_turns=turn_penalty_min_turns,
-        turn_penalty_max=turn_penalty_max,
-        resource_penalty_max=resource_penalty_max,
-    )
-
 def _as_list(x: Any) -> list[Any]:
     if x is None:
         return []
@@ -218,17 +181,6 @@ def load_environment(
     min_iterations: int = 2,
     min_subcall: int = 0,
     user_prologue: str | None = user_prologue,
-    shaping_coef: float = 0.0,
-    correct_threshold: float = 1.0,
-    subcall_budget: float = 0.0,
-    token_budget: float = 0.0,
-    iteration_weight: float = 1.0,
-    subcall_weight: float = 1.0,
-    token_weight: float = 1.0,
-    reward_style: str = "auto",
-    turn_penalty_min_turns: int = 20,
-    turn_penalty_max: float = 0.02,
-    resource_penalty_max: float = 0.02,
     **kwargs: Any,
 ) -> vf.Environment:
     dataset = _build_oolong_pairs_dataset(
@@ -237,22 +189,11 @@ def load_environment(
         num_examples=num_examples,
         seed=seed,
     )
-    rubric = _build_rubric(
-        _score_oolong_pairs,
+    rubric = rlm_train.RLMTrainRubric(
+        correctness=_score_oolong_pairs,
+        weight=1.0,
         min_iterations=min_iterations,
         min_subcall=min_subcall,
-        max_iterations=max_iterations,
-        shaping_coef=shaping_coef,
-        correct_threshold=correct_threshold,
-        subcall_budget=subcall_budget,
-        token_budget=token_budget,
-        iteration_weight=iteration_weight,
-        subcall_weight=subcall_weight,
-        token_weight=token_weight,
-        reward_style=reward_style,
-        turn_penalty_min_turns=turn_penalty_min_turns,
-        turn_penalty_max=turn_penalty_max,
-        resource_penalty_max=resource_penalty_max,
     )
     return rlm_train.RLMTrainEnv(
         dataset=dataset,

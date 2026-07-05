@@ -37,7 +37,6 @@ from oolong.env import (
     _find_comparison_phrase,
     _score as _score_oolong,
     _synth_score as _oolong_synth_score,
-    _trajectory_answer_recall as _oolong_traj_answer_recall,
 )
 from oolong_pairs.env import _parse_pairs, _score_oolong_pairs, _score_pairs
 
@@ -175,40 +174,6 @@ def test_oolong_wrong_answer_scores_zero():
 def test_score_oolong_async():
     info = json.dumps({"answer": "['entity']"})
     assert _run(_score_oolong(info, _state("Answer: entity"))) == 1.0
-
-
-# --- OOLONG trajectory-answer recall (Harness-1 discovery signal) -----------
-
-
-def test_oolong_trajectory_recall_correct_final_is_one():
-    info = json.dumps({"answer": "['entity']"})
-    st = {"rlm_final_answer": "Answer: entity", "rlm_trajectory_text": ""}
-    assert _run(_oolong_traj_answer_recall(info, st)) == 1.0
-
-
-def test_oolong_trajectory_recall_credits_mid_trajectory_discovery():
-    # Wrong final answer, but the gold label was printed earlier in the REPL.
-    info = json.dumps({"answer": "['entity']"})
-    st = {
-        "rlm_final_answer": "Answer: location",
-        "rlm_trajectory_text": "counts: entity=14 location=3\ncandidate: entity",
-    }
-    assert _run(_oolong_traj_answer_recall(info, st)) == 1.0
-
-
-def test_oolong_trajectory_recall_zero_when_never_surfaced():
-    info = json.dumps({"answer": "['entity']"})
-    st = {
-        "rlm_final_answer": "Answer: location",
-        "rlm_trajectory_text": "counts: location=3 abbreviation=2",
-    }
-    assert _run(_oolong_traj_answer_recall(info, st)) == 0.0
-
-
-def test_oolong_trajectory_recall_empty_digest_is_zero():
-    info = json.dumps({"answer": "['entity']"})
-    st = {"rlm_final_answer": "Answer: location", "rlm_trajectory_text": ""}
-    assert _run(_oolong_traj_answer_recall(info, st)) == 0.0
 
 
 # --- BrowseComp-Plus: answer extraction, decryption, judge parsing ----------

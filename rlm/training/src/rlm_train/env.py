@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import math
 import uuid
 from collections.abc import Callable
 from typing import Any
@@ -28,15 +27,6 @@ from rlm_train.rubric import RLMTrainRubric
 logger = logging.getLogger(__name__)
 
 _MAX_REPL_OUTPUT_CHARS = 20_000
-_MAX_TRAJECTORY_TEXT_CHARS = 16_000
-_MAX_TRAJECTORY_LINE_CHARS = 200
-_DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN = 3.0
-_ROOT_WINDOW_MARKER = (
-    "Earlier RLM transcript messages were omitted to stay within the root model "
-    "context budget. The Python REPL state persists; use small `print(...)` calls "
-    "or `SHOW_VARS()` to inspect needed variables rather than asking for omitted "
-    "raw context or long outputs."
-)
 
 
 class RLMTrainEnv(vf.MultiTurnEnv):
@@ -53,14 +43,6 @@ class RLMTrainEnv(vf.MultiTurnEnv):
         user_prologue: str | None = None,
         bootstrap_code: str | None = None,
         orchestrator: bool = True,
-        enforce_sub_prompt_budget: bool = True,
-        sub_prompt_token_budget: int = 0,
-        sub_prompt_char_budget: int | None = None,
-        sub_prompt_chars_per_token: float = _DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN,
-        enforce_root_prompt_budget: bool = True,
-        root_prompt_token_budget: int = 0,
-        root_prompt_char_budget: int | None = None,
-        root_prompt_chars_per_token: float = _DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN,
         **kwargs: Any,
     ):
         if "max_turns" in kwargs:
@@ -87,18 +69,6 @@ class RLMTrainEnv(vf.MultiTurnEnv):
         self._sub_llm_fn = sub_llm_fn
         self._sub_llm_fn_batched = sub_llm_fn_batched
         self._bootstrap_code = bootstrap_code or ""
-        self._enforce_sub_prompt_budget = bool(enforce_sub_prompt_budget)
-        self._sub_prompt_token_budget = int(sub_prompt_token_budget or 0)
-        self._sub_prompt_char_budget = (
-            int(sub_prompt_char_budget) if sub_prompt_char_budget is not None else None
-        )
-        self._sub_prompt_chars_per_token = float(sub_prompt_chars_per_token or 0.0)
-        self._enforce_root_prompt_budget = bool(enforce_root_prompt_budget)
-        self._root_prompt_token_budget = int(root_prompt_token_budget or 0)
-        self._root_prompt_char_budget = (
-            int(root_prompt_char_budget) if root_prompt_char_budget is not None else None
-        )
-        self._root_prompt_chars_per_token = float(root_prompt_chars_per_token or 0.0)
         self._proxy: SubLLMProxy | None = None
         self._proxy_lock: asyncio.Lock | None = None
 
@@ -157,10 +127,6 @@ class RLMTrainEnv(vf.MultiTurnEnv):
                 fake_query=self._sub_llm_fn,
                 fake_query_batched=self._sub_llm_fn_batched,
                 state_ref=state,
-                enforce_sub_prompt_budget=self._enforce_sub_prompt_budget,
-                sub_prompt_token_budget=self._sub_prompt_token_budget,
-                sub_prompt_char_budget=self._sub_prompt_char_budget,
-                sub_prompt_chars_per_token=self._sub_prompt_chars_per_token,
             ),
         )
 
@@ -189,24 +155,9 @@ class RLMTrainEnv(vf.MultiTurnEnv):
         state["rlm_sub_llm_calls"] = 0
         state["rlm_sub_llm_tokens"] = 0
         state["rlm_sub_llm_usage_missing"] = 0
-        state["rlm_sub_llm_prompt_attempts"] = 0
-        state["rlm_sub_llm_prompt_rejections"] = 0
-        state["rlm_sub_llm_prompt_chars_max"] = 0
-        state["rlm_sub_llm_prompt_est_tokens_max"] = 0
-        state["rlm_sub_llm_prompt_rejected_chars_max"] = 0
-        state["rlm_sub_llm_prompt_rejected_est_tokens_max"] = 0
-        state["rlm_root_prompt_chars_max"] = 0
-        state["rlm_root_prompt_est_tokens_max"] = 0
-        state["rlm_root_prompt_windowed"] = 0
-        state["rlm_root_prompt_over_budget"] = 0
-        state["rlm_root_prompt_chars_after_window_max"] = 0
-        state["rlm_root_prompt_est_tokens_after_window_max"] = 0
-        state["rlm_root_prompt_omitted_messages_max"] = 0
         state["rlm_final_answer"] = None
         state["rlm_context_count"] = 1
         state["rlm_final_repl_outputs"] = []
-        state["rlm_trajectory_text"] = ""
-        state["rlm_trajectory_text_truncated"] = 0
 
         if self._user_prologue:
             state["rlm_history"].append({"role": "user", "content": self._user_prologue})
@@ -216,14 +167,6 @@ class RLMTrainEnv(vf.MultiTurnEnv):
         )
         state["rlm_history"].append(user_iter0)
         state["prompt"] = list(state["rlm_history"])
-        _prepare_root_prompt(
-            state,
-            state["prompt"],
-            enforce=self._enforce_root_prompt_budget,
-            token_budget=self._root_prompt_token_budget,
-            char_budget=self._root_prompt_char_budget,
-            chars_per_token=self._root_prompt_chars_per_token,
-        )
 
     async def _process_pending_trajectory(self, state: State) -> Messages | None:
         """Execute trajectory turns whose REPL blocks have not been processed.
@@ -273,7 +216,6 @@ class RLMTrainEnv(vf.MultiTurnEnv):
                     final_from_answer = result.final_answer
 
             repl_msgs = _format_repl_outputs(outputs)
-            _accumulate_trajectory_text(state, outputs)
             history.append(assistant_msg)
             history.extend(repl_msgs)
             state["rlm_n_processed"] = n_processed + 1
@@ -285,15 +227,7 @@ class RLMTrainEnv(vf.MultiTurnEnv):
                 state["final_answer"] = final_from_answer
                 state["final_env_response"] = repl_msgs
                 state["rlm_final_repl_outputs"] = repl_msgs
-                messages = _normalize_for_api(history)
-                return _prepare_root_prompt(
-                    state,
-                    messages,
-                    enforce=self._enforce_root_prompt_budget,
-                    token_budget=self._root_prompt_token_budget,
-                    char_budget=self._root_prompt_char_budget,
-                    chars_per_token=self._root_prompt_chars_per_token,
-                )
+                return _normalize_for_api(history)
 
         return None
 
@@ -308,15 +242,7 @@ class RLMTrainEnv(vf.MultiTurnEnv):
 
     async def get_prompt_messages(self, state: State) -> Messages:
         if not state["trajectory"]:
-            prompt = list(state["prompt"])
-            return _prepare_root_prompt(
-                state,
-                prompt,
-                enforce=self._enforce_root_prompt_budget,
-                token_budget=self._root_prompt_token_budget,
-                char_budget=self._root_prompt_char_budget,
-                chars_per_token=self._root_prompt_chars_per_token,
-            )
+            return list(state["prompt"])
 
         final_messages = await self._process_pending_trajectory(state)
         if final_messages is not None:
@@ -331,15 +257,7 @@ class RLMTrainEnv(vf.MultiTurnEnv):
             history_count=0,
         )
         history.append(user_iter)
-        messages = _normalize_for_api(history)
-        return _prepare_root_prompt(
-            state,
-            messages,
-            enforce=self._enforce_root_prompt_budget,
-            token_budget=self._root_prompt_token_budget,
-            char_budget=self._root_prompt_char_budget,
-            chars_per_token=self._root_prompt_chars_per_token,
-        )
+        return _normalize_for_api(history)
 
     async def env_response(self, messages: Messages, state: State, **kwargs: Any) -> Messages | str:
         return []
@@ -373,8 +291,8 @@ def _record_sub_call(state: State, meta: Any) -> None:
 
     Increments the sub-LLM call counter and, when the proxy reports token usage
     in ``meta['usage']``, accumulates total sub-LLM tokens. This is pure
-    monitoring: it does NOT change the upstream correctness-only reward. The
-    optional efficiency-shaping rubric reads these counters but is opt-in.
+    monitoring: it does NOT change the upstream correctness-only reward; the
+    adaptive-cost advantage reads these counters at the advantage layer.
     """
     state["rlm_sub_llm_calls"] = int(state.get("rlm_sub_llm_calls") or 0) + 1
     usage = meta.get("usage") if isinstance(meta, dict) else None
@@ -421,165 +339,6 @@ def _normalize_for_api(msgs: list) -> list:
     return out
 
 
-def _message_content_text(content: Any) -> str:
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts: list[str] = []
-        for p in content:
-            t = getattr(p, "text", None) or (p.get("text") if isinstance(p, dict) else None)
-            if t:
-                parts.append(str(t))
-        return "".join(parts)
-    if content is None:
-        return ""
-    return str(content)
-
-
-def _messages_text(msgs: list) -> str:
-    parts: list[str] = []
-    for m in msgs:
-        role = m.get("role") if isinstance(m, dict) else getattr(m, "role", None)
-        content = m.get("content") if isinstance(m, dict) else getattr(m, "content", None)
-        if role:
-            parts.append(str(role))
-        text = _message_content_text(content)
-        if text:
-            parts.append(text)
-    return "\n".join(parts)
-
-
-def _root_prompt_limit(
-    *,
-    token_budget: int,
-    char_budget: int | None,
-    chars_per_token: float,
-) -> tuple[int, int]:
-    cpt = chars_per_token if chars_per_token > 0 else _DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN
-    token_limit = int(token_budget or 0)
-    char_limit = int(char_budget) if char_budget is not None else 0
-    if char_limit <= 0 and token_limit > 0:
-        char_limit = int(token_limit * max(cpt, 1.0))
-    return token_limit, char_limit
-
-
-def _record_root_prompt_size(state: State, msgs: list, *, after_window: bool = False) -> None:
-    text = _messages_text(msgs)
-    chars = len(text)
-    est_tokens = int(math.ceil(chars / _DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN))
-    if after_window:
-        state["rlm_root_prompt_chars_after_window_max"] = max(
-            int(state.get("rlm_root_prompt_chars_after_window_max") or 0), chars
-        )
-        state["rlm_root_prompt_est_tokens_after_window_max"] = max(
-            int(state.get("rlm_root_prompt_est_tokens_after_window_max") or 0), est_tokens
-        )
-    else:
-        state["rlm_root_prompt_chars_max"] = max(
-            int(state.get("rlm_root_prompt_chars_max") or 0), chars
-        )
-        state["rlm_root_prompt_est_tokens_max"] = max(
-            int(state.get("rlm_root_prompt_est_tokens_max") or 0), est_tokens
-        )
-    logger.debug(
-        "RLM root prompt size rollout=%s after_window=%s chars=%d est_tokens=%d",
-        state.get("rlm_rollout_id"),
-        after_window,
-        chars,
-        est_tokens,
-    )
-
-
-def _fits_root_budget(msgs: list, *, char_limit: int) -> bool:
-    if char_limit <= 0:
-        return True
-    return len(_messages_text(msgs)) <= char_limit
-
-
-def _prefix_until_first_assistant(msgs: list) -> list:
-    for i, m in enumerate(msgs):
-        role = m.get("role") if isinstance(m, dict) else getattr(m, "role", None)
-        if role == "assistant":
-            return list(msgs[:i])
-    return list(msgs)
-
-
-def _window_root_prompt(
-    state: State,
-    msgs: list,
-    *,
-    token_budget: int,
-    char_budget: int | None,
-    chars_per_token: float,
-) -> list:
-    _token_limit, char_limit = _root_prompt_limit(
-        token_budget=token_budget,
-        char_budget=char_budget,
-        chars_per_token=chars_per_token,
-    )
-    if char_limit <= 0 or _fits_root_budget(msgs, char_limit=char_limit):
-        return list(msgs)
-
-    state["rlm_root_prompt_over_budget"] = int(state.get("rlm_root_prompt_over_budget") or 0) + 1
-    prefix = _prefix_until_first_assistant(msgs)
-    # No generated turns yet: there is nothing safe to drop.
-    if len(prefix) == len(msgs):
-        return list(msgs)
-
-    marker = {"role": "user", "content": _ROOT_WINDOW_MARKER}
-    suffix = list(msgs[len(prefix) :])
-    kept_suffix: list = []
-
-    for m in reversed(suffix):
-        candidate = prefix + [marker] + [m] + kept_suffix
-        if _fits_root_budget(candidate, char_limit=char_limit):
-            kept_suffix.insert(0, m)
-
-    # Always keep the most recent message, even if the pinned prompt is already tight.
-    if not kept_suffix and suffix:
-        kept_suffix = [suffix[-1]]
-
-    windowed = prefix + [marker] + kept_suffix
-    omitted = len(msgs) - len(windowed)
-    state["rlm_root_prompt_windowed"] = int(state.get("rlm_root_prompt_windowed") or 0) + 1
-    state["rlm_root_prompt_omitted_messages_max"] = max(
-        int(state.get("rlm_root_prompt_omitted_messages_max") or 0), max(0, omitted)
-    )
-    logger.info(
-        "RLM root prompt windowed rollout=%s omitted=%d before_chars=%d after_chars=%d",
-        state.get("rlm_rollout_id"),
-        omitted,
-        len(_messages_text(msgs)),
-        len(_messages_text(windowed)),
-    )
-    return windowed
-
-
-def _prepare_root_prompt(
-    state: State,
-    msgs: list,
-    *,
-    enforce: bool,
-    token_budget: int,
-    char_budget: int | None,
-    chars_per_token: float,
-) -> list:
-    _record_root_prompt_size(state, msgs, after_window=False)
-    out = (
-        _window_root_prompt(
-            state,
-            msgs,
-            token_budget=token_budget,
-            char_budget=char_budget,
-            chars_per_token=chars_per_token,
-        )
-        if enforce
-        else list(msgs)
-    )
-    _record_root_prompt_size(state, out, after_window=True)
-    return out
-
-
 def _last_assistant(completion: Any) -> Any:
     if not completion:
         return {"role": "assistant", "content": ""}
@@ -614,32 +373,6 @@ def _pack_exec(code: str, result: ExecResult) -> dict[str, Any]:
         "locals_keys": result.locals_keys,
         "final_answer": result.final_answer,
     }
-
-
-def _accumulate_trajectory_text(state: State, outputs: list[dict[str, Any]]) -> None:
-    if not outputs:
-        return
-    existing = state.get("rlm_trajectory_text") or ""
-    if len(existing) >= _MAX_TRAJECTORY_TEXT_CHARS:
-        state["rlm_trajectory_text_truncated"] = 1
-        return
-    chunks: list[str] = []
-    for o in outputs:
-        stdout = o.get("stdout") or ""
-        if not stdout:
-            continue
-        for line in stdout.splitlines():
-            line = line.strip()
-            if not line or len(line) > _MAX_TRAJECTORY_LINE_CHARS:
-                continue
-            chunks.append(line)
-    if not chunks:
-        return
-    merged = existing + ("\n" if existing else "") + "\n".join(chunks)
-    if len(merged) > _MAX_TRAJECTORY_TEXT_CHARS:
-        merged = merged[:_MAX_TRAJECTORY_TEXT_CHARS]
-        state["rlm_trajectory_text_truncated"] = 1
-    state["rlm_trajectory_text"] = merged
 
 
 def _format_repl_outputs(outputs: list[dict[str, Any]]) -> list[dict[str, str]]:

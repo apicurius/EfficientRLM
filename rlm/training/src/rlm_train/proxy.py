@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-import math
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -14,16 +13,8 @@ from aiohttp import web
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SUB_PROMPT_TOKEN_BUDGET = 12_000
-DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN = 3.0
-
-
 FakeQuery = Callable[[str, "Any"], str | Awaitable[str]]
 FakeQueryBatched = Callable[[list[str], "Any"], list[str] | Awaitable[list[str]]]
-
-
-class SubPromptTooLargeError(ValueError):
-    """Raised when a sub-LLM prompt is rejected before the model call."""
 
 
 @dataclass
@@ -36,10 +27,6 @@ class ClientHandle:
     fake_query: FakeQuery | None = None
     fake_query_batched: FakeQueryBatched | None = None
     state_ref: Any | None = None
-    enforce_sub_prompt_budget: bool = True
-    sub_prompt_token_budget: int = DEFAULT_SUB_PROMPT_TOKEN_BUDGET
-    sub_prompt_char_budget: int | None = None
-    sub_prompt_chars_per_token: float = DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN
 
 
 async def _maybe_await(result: Any) -> Any:
@@ -69,116 +56,6 @@ def _flatten_prompt(prompt: str | list) -> str:
             if content is not None:
                 return str(content)
     return str(prompt)
-
-
-def _prompt_budget_text(prompt: str | list) -> str:
-    """Best-effort full prompt text used only for local budget checks/metrics."""
-
-    if isinstance(prompt, str):
-        return prompt
-    if not isinstance(prompt, list):
-        return str(prompt)
-
-    parts: list[str] = []
-    for m in prompt:
-        role = m.get("role") if isinstance(m, dict) else getattr(m, "role", None)
-        content = m.get("content") if isinstance(m, dict) else getattr(m, "content", None)
-        if role:
-            parts.append(str(role))
-        if isinstance(content, str):
-            parts.append(content)
-        elif isinstance(content, list):
-            for p in content:
-                t = getattr(p, "text", None) or (p.get("text") if isinstance(p, dict) else None)
-                if t:
-                    parts.append(str(t))
-        elif content is not None:
-            parts.append(str(content))
-    return "\n".join(parts)
-
-
-def _estimate_tokens(chars: int, chars_per_token: float) -> int:
-    cpt = chars_per_token if chars_per_token > 0 else DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN
-    return int(math.ceil(chars / cpt))
-
-
-def _state_incr(state: Any, key: str, delta: int = 1) -> None:
-    if state is None:
-        return
-    try:
-        state[key] = int(state.get(key) or 0) + int(delta)
-    except Exception:
-        logger.exception("failed updating state counter %s", key)
-
-
-def _state_max(state: Any, key: str, value: int) -> None:
-    if state is None:
-        return
-    try:
-        state[key] = max(int(state.get(key) or 0), int(value))
-    except Exception:
-        logger.exception("failed updating state max %s", key)
-
-
-def _record_sub_prompt_stats(handle: ClientHandle, chars: int, est_tokens: int) -> None:
-    state = handle.state_ref
-    _state_incr(state, "rlm_sub_llm_prompt_attempts")
-    _state_max(state, "rlm_sub_llm_prompt_chars_max", chars)
-    _state_max(state, "rlm_sub_llm_prompt_est_tokens_max", est_tokens)
-
-
-def _record_sub_prompt_rejection(handle: ClientHandle, chars: int, est_tokens: int) -> None:
-    state = handle.state_ref
-    _state_incr(state, "rlm_sub_llm_prompt_rejections")
-    _state_max(state, "rlm_sub_llm_prompt_rejected_chars_max", chars)
-    _state_max(state, "rlm_sub_llm_prompt_rejected_est_tokens_max", est_tokens)
-
-
-def _check_sub_prompt_budget(handle: ClientHandle, prompt: str | list) -> None:
-    text = _prompt_budget_text(prompt)
-    chars = len(text)
-    est_tokens = _estimate_tokens(chars, handle.sub_prompt_chars_per_token)
-    _record_sub_prompt_stats(handle, chars, est_tokens)
-
-    if not handle.enforce_sub_prompt_budget:
-        return
-
-    token_budget = int(handle.sub_prompt_token_budget or 0)
-    char_budget = handle.sub_prompt_char_budget
-    if char_budget is None and token_budget > 0:
-        char_budget = int(token_budget * max(handle.sub_prompt_chars_per_token, 1.0))
-    char_budget = int(char_budget or 0)
-
-    over_tokens = token_budget > 0 and est_tokens > token_budget
-    over_chars = char_budget > 0 and chars > char_budget
-    if not (over_tokens or over_chars):
-        return
-
-    _record_sub_prompt_rejection(handle, chars, est_tokens)
-    reasons: list[str] = []
-    if over_tokens:
-        reasons.append(f"estimated {est_tokens:,} tokens > cap {token_budget:,}")
-    if over_chars:
-        reasons.append(f"{chars:,} chars > cap {char_budget:,}")
-    chunk_basis = max(
-        (est_tokens / token_budget) if token_budget > 0 else 0.0,
-        (chars / char_budget) if char_budget > 0 else 0.0,
-        1.0,
-    )
-    chunks = int(math.ceil(chunk_basis))
-    cap_text = []
-    if token_budget > 0:
-        cap_text.append(f"{token_budget:,} estimated tokens")
-    if char_budget > 0:
-        cap_text.append(f"{char_budget:,} chars")
-    raise SubPromptTooLargeError(
-        "sub-LLM prompt exceeded the scaffold budget "
-        f"({'; '.join(reasons)}). "
-        f"Cap: {' / '.join(cap_text)}. "
-        f"Split this input into at least {chunks} smaller chunk(s) before calling "
-        "`llm_query` or `llm_query_batched`. The prompt was rejected before the "
-        "model call; no sub-LLM call was spent."
-    )
 
 
 def _coerce_messages(prompt: str | list) -> list:
@@ -266,9 +143,6 @@ class SubLLMProxy:
         model = body.get("model") or handle.model
         try:
             text, meta = await self._completion(handle, prompt, model)
-        except SubPromptTooLargeError as e:
-            logger.warning("sub-llm prompt rejected: %s", e)
-            return web.json_response({"error": str(e), "too_large": True})
         except Exception as e:  # noqa: BLE001
             logger.exception("sub-llm call failed")
             return web.json_response({"error": str(e)})
@@ -327,9 +201,6 @@ class SubLLMProxy:
                         except Exception:
                             logger.exception("record_call failed")
                     return text
-                except SubPromptTooLargeError as e:
-                    logger.warning("sub-llm batched prompt rejected: %s", e)
-                    return f"Error: {e}"
                 except Exception as e:  # noqa: BLE001
                     logger.exception("sub-llm batched call failed")
                     return f"Error: {e}"
@@ -350,7 +221,6 @@ class SubLLMProxy:
             if content is not None:
                 return (content if isinstance(content, str) else str(content)), {}
 
-        _check_sub_prompt_budget(handle, prompt)
         messages = _coerce_messages(prompt)
         sampling_args = dict(handle.sampling_args or {})
         # TITO client requires non-None state; hand it an empty trajectory.

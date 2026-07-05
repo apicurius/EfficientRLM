@@ -114,7 +114,6 @@ max_iterations = 20
 sub_max_tokens = 4096
 min_iterations = 2
 min_subcall = 0
-reward_style = "correctness"
 
 [[orchestrator.train.env]]
 id = "browsecomp_plus"
@@ -146,7 +145,6 @@ min_iterations = 2
 min_subcall = 0
 reward_mode = "judge"
 judge_model = "openai/gpt-5-nano"
-reward_style = "correctness"
 
 [orchestrator.eval]
 interval = 20
@@ -196,4 +194,3 @@ min_iterations = 2
 min_subcall = 0
 reward_mode = "judge"
 judge_model = "openai/gpt-5-nano"
-reward_style = "correctness"

@@ -111,7 +111,6 @@ min_iterations = 2
 min_subcall = 0
 reward_mode = "judge"
 judge_model = "openai/gpt-5-nano"
-reward_style = "correctness"
 
 [orchestrator.eval]
 interval = 10
@@ -142,4 +141,3 @@ min_iterations = 2
 min_subcall = 0
 reward_mode = "judge"
 judge_model = "openai/gpt-5-nano"
-reward_style = "correctness"

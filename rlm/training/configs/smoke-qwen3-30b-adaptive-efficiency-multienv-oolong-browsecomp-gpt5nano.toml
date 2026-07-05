@@ -109,15 +109,8 @@ max_iterations = 20
 sub_max_tokens = 4096
 min_iterations = 2
 min_subcall = 0
-shaping_coef = 0.2
-reward_style = "efficiency"
 # Shared resource telemetry/scales. For harness1 these feed the additive
 # resource penalty; for efficiency they feed the gated efficiency bonus.
-subcall_budget = 32.0
-token_budget = 200000.0
-iteration_weight = 1.0
-subcall_weight = 1.0
-token_weight = 1.0
 
 [[orchestrator.train.env]]
 id = "browsecomp_plus"
@@ -146,14 +139,6 @@ min_iterations = 2
 min_subcall = 0
 reward_mode = "judge"
 judge_model = "openai/gpt-5-nano"
-shaping_coef = 0.2
-reward_style = "efficiency"
-correct_threshold = 1.0
-subcall_budget = 32.0
-token_budget = 200000.0
-iteration_weight = 1.0
-subcall_weight = 1.0
-token_weight = 1.0
 
 [orchestrator.eval]
 interval = 20
@@ -203,11 +188,3 @@ min_iterations = 2
 min_subcall = 0
 reward_mode = "judge"
 judge_model = "openai/gpt-5-nano"
-shaping_coef = 0.0
-reward_style = "correctness"
-correct_threshold = 1.0
-subcall_budget = 32.0
-token_budget = 200000.0
-iteration_weight = 1.0
-subcall_weight = 1.0
-token_weight = 1.0

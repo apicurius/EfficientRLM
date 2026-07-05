@@ -13,10 +13,6 @@ OOLONG-synth long-context aggregate QA wired through `RLMTrainEnv`.
 The long context is exposed as the REPL variable `context`; the model finalizes
 by setting `answer["content"]` and `answer["ready"] = True`.
 
-In `.research/ERLM-main`, opt-in efficiency shaping is still available through
-rubric-only kwargs (`shaping_coef`, `correct_threshold`, `subcall_budget`,
-`token_budget`, and `*_weight`). With `shaping_coef = 0.0`, this uses the stock
-correctness-only `RLMTrainRubric`; with `shaping_coef > 0.0`, it uses
-`EfficiencyGatedRubric`. The OOLONG data/scoring path and old args remain aligned with `rlm/`;
-`.research/ERLM-main` adds the OOLONG per-env `user_prologue` as a
-runtime hint to reduce context-output leakage.
+This tree carries no shaping or budget machinery: the rubric is the stock
+correctness-only `RLMTrainRubric`, and the only non-upstream training piece is
+the adaptive scaffold-cost advantage at the trainer's advantage seam.

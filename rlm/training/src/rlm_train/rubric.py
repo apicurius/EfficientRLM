@@ -37,19 +37,6 @@ class RLMTrainRubric(vf.Rubric):
         self.add_metric(self.rlm_sub_llm_calls)
         self.add_metric(self.rlm_sub_llm_tokens)
         self.add_metric(self.rlm_sub_llm_usage_missing)
-        self.add_metric(self.rlm_sub_llm_prompt_attempts)
-        self.add_metric(self.rlm_sub_llm_prompt_rejections)
-        self.add_metric(self.rlm_sub_llm_prompt_chars_max)
-        self.add_metric(self.rlm_sub_llm_prompt_est_tokens_max)
-        self.add_metric(self.rlm_sub_llm_prompt_rejected_chars_max)
-        self.add_metric(self.rlm_sub_llm_prompt_rejected_est_tokens_max)
-        self.add_metric(self.rlm_root_prompt_chars_max)
-        self.add_metric(self.rlm_root_prompt_est_tokens_max)
-        self.add_metric(self.rlm_root_prompt_windowed)
-        self.add_metric(self.rlm_root_prompt_over_budget)
-        self.add_metric(self.rlm_root_prompt_chars_after_window_max)
-        self.add_metric(self.rlm_root_prompt_est_tokens_after_window_max)
-        self.add_metric(self.rlm_root_prompt_omitted_messages_max)
         self.add_metric(self.rlm_has_final_answer)
         self.add_metric(self.rlm_below_min_iterations)
         self.add_metric(self.rlm_below_min_subcall)
@@ -144,44 +131,18 @@ class RLMTrainRubric(vf.Rubric):
 
     async def rlm_sub_llm_usage_missing(self, state: State) -> int:
         return int(state.get("rlm_sub_llm_usage_missing") or 0)
-    async def rlm_sub_llm_prompt_attempts(self, state: State) -> int:
-        return int(state.get("rlm_sub_llm_prompt_attempts") or 0)
 
-    async def rlm_sub_llm_prompt_rejections(self, state: State) -> int:
-        return int(state.get("rlm_sub_llm_prompt_rejections") or 0)
 
-    async def rlm_sub_llm_prompt_chars_max(self, state: State) -> int:
-        return int(state.get("rlm_sub_llm_prompt_chars_max") or 0)
 
-    async def rlm_sub_llm_prompt_est_tokens_max(self, state: State) -> int:
-        return int(state.get("rlm_sub_llm_prompt_est_tokens_max") or 0)
 
-    async def rlm_sub_llm_prompt_rejected_chars_max(self, state: State) -> int:
-        return int(state.get("rlm_sub_llm_prompt_rejected_chars_max") or 0)
 
-    async def rlm_sub_llm_prompt_rejected_est_tokens_max(self, state: State) -> int:
-        return int(state.get("rlm_sub_llm_prompt_rejected_est_tokens_max") or 0)
 
-    async def rlm_root_prompt_chars_max(self, state: State) -> int:
-        return int(state.get("rlm_root_prompt_chars_max") or 0)
 
-    async def rlm_root_prompt_est_tokens_max(self, state: State) -> int:
-        return int(state.get("rlm_root_prompt_est_tokens_max") or 0)
 
-    async def rlm_root_prompt_windowed(self, state: State) -> int:
-        return int(state.get("rlm_root_prompt_windowed") or 0)
 
-    async def rlm_root_prompt_over_budget(self, state: State) -> int:
-        return int(state.get("rlm_root_prompt_over_budget") or 0)
 
-    async def rlm_root_prompt_chars_after_window_max(self, state: State) -> int:
-        return int(state.get("rlm_root_prompt_chars_after_window_max") or 0)
 
-    async def rlm_root_prompt_est_tokens_after_window_max(self, state: State) -> int:
-        return int(state.get("rlm_root_prompt_est_tokens_after_window_max") or 0)
 
-    async def rlm_root_prompt_omitted_messages_max(self, state: State) -> int:
-        return int(state.get("rlm_root_prompt_omitted_messages_max") or 0)
 
     async def rlm_has_final_answer(self, state: State) -> int:
         return 1 if state.get("rlm_final_answer") else 0
