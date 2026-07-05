@@ -1,15 +1,12 @@
-# BC+-ONLY LEAN2 SMOKE: lean regime + ROOT WINDOW ALIGNED TO TRAINER (the decisive
-# credit-horizon test). root_prompt_token_budget 12000->6500 est-tokens (~19.5k chars,
-# ~4.6k real tokens) so every fed root prompt + completion fits the 8192 loss window:
-# finalization turns train on ~100% of rollouts (was: dead on 53% under lean, 58% old).
-# Also restores upstream's min_subcall=1 (train side): zero-sub-call rollouts get
-# gated_reward=0 -> invalid at the advantage layer -> the measured no-delegation
-# shortcut (63% of rollouts, scoring 0.424 vs 0.334) stops being reward-optimal.
-# vs the 40-step smoke: group_size 4->8 (batch_size stays 32 -> 4 prompts/step,
-# denser valid-sibling groups), max_iterations 20->12, sub_max_tokens 4096->2048,
-# context_chunk_chars 20000->12000 on the TRAIN env only.
-# Eval is unchanged from the 40-step smoke (chunk 20000, iter 20, sub 4096,
-# every 10 steps, n=25) so eval points are directly comparable across runs.
+# BC+-ONLY LEAN2 SMOKE: lean regime + the OOLONG-WAY alignment (no train budgets).
+# _DEFAULT_SUB_PROMPT_TOKEN_BUDGET deleted from rlm_train.env: budgets now default
+# to 0 = disabled. Train env runs NAKED like upstream oolong: the prologue contract
+# (never print raw chunks, delegate via llm_query_batched, compact prints) is
+# enforced by selection pressure, not windowing -- min_subcall=1 invalidates the
+# zero-delegation shortcut at the advantage layer, and contract violators that
+# overflow max_model_len error out of the group instead of being silently windowed.
+# EVAL keeps the historical protocol: budgets pinned explicitly at 12000 below so
+# eval curves stay comparable to all previous runs.
 output_dir = "/scratch/omeerdogan23/erlm/.research/EfficientRLM/outputs/smoke-qwen3-30b-bcplus-lean2-winaligned-60step"
 max_steps = 60
 seq_len = 8192
@@ -105,7 +102,6 @@ solve_floor = 0.25
 gamma = 1.0
 
 [orchestrator.train.env.args]
-root_prompt_token_budget = 6500
 num_examples = 125
 start_index = 0
 k = 50
@@ -137,6 +133,8 @@ num_examples = 25
 group_size = 1
 
 [orchestrator.eval.env.args]
+root_prompt_token_budget = 12000
+sub_prompt_token_budget = 12000
 num_examples = 25
 start_index = 125
 k = 50

@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 _MAX_REPL_OUTPUT_CHARS = 20_000
 _MAX_TRAJECTORY_TEXT_CHARS = 16_000
 _MAX_TRAJECTORY_LINE_CHARS = 200
-_DEFAULT_SUB_PROMPT_TOKEN_BUDGET = 12_000
 _DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN = 3.0
 _ROOT_WINDOW_MARKER = (
     "Earlier RLM transcript messages were omitted to stay within the root model "
@@ -55,11 +54,11 @@ class RLMTrainEnv(vf.MultiTurnEnv):
         bootstrap_code: str | None = None,
         orchestrator: bool = True,
         enforce_sub_prompt_budget: bool = True,
-        sub_prompt_token_budget: int = _DEFAULT_SUB_PROMPT_TOKEN_BUDGET,
+        sub_prompt_token_budget: int = 0,
         sub_prompt_char_budget: int | None = None,
         sub_prompt_chars_per_token: float = _DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN,
         enforce_root_prompt_budget: bool = True,
-        root_prompt_token_budget: int = _DEFAULT_SUB_PROMPT_TOKEN_BUDGET,
+        root_prompt_token_budget: int = 0,
         root_prompt_char_budget: int | None = None,
         root_prompt_chars_per_token: float = _DEFAULT_SUB_PROMPT_CHARS_PER_TOKEN,
         **kwargs: Any,
