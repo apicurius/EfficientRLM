@@ -35,7 +35,7 @@ PACKAGES = {
 PROLOGUE_SHA256 = {
     "oolong": "08b4512dc465a55080f65e023c30fe49ec802b26f13202edf71c2a1cd0eca99c",
     "oolong_pairs": "7b552f0c47d2591f8523bd634dc00e999aa472f83fe70b24148a60e164683246",
-    "browsecomp_plus": "de219b799877e91b445dbbc34a8d371dab59667c393158a16b21ba7c35bd43db",
+    "browsecomp_plus": "7fc18d5eef6e5ceff65a230b88d7384ddbc5aef5f82ee985b7af63810f2ec5f6",
     "longbench_codeqa": "d44b8ae73ebd3b6d50dfe5219403a95a93f7212cd04c92b874877a6c417a1671",
 }
 

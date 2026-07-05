@@ -4,8 +4,10 @@ user_prologue = """BrowseComp-Plus environment notes:
 - The evidence documents are available in the REPL variable `context`: a Python
   list of chunk strings (a shuffled mix of gold, supporting, and hard-negative
   document chunks), each starting with a provenance header like
-  `[BrowseComp+ doc 7 chunk 2/5]`. Do not print, paste, or echo raw chunks or
-  large chunk batches into REPL output.
+  `[BrowseComp+ doc 7 chunk 2/5]`. Never print, paste, or echo chunk text into
+  REPL output -- not even a single chunk or slice (`print(context[i])` floods
+  your own context); the ONLY way to read chunk text is to send it to
+  `llm_query_batched` and print the compact results.
 - Print only compact diagnostics: counts, short samples, candidate answers, and
   final evidence.
 - First use Python keyword/regex filtering over `context` to pick a small
