@@ -1,0 +1,149 @@
+# BC+-ONLY LEAN2 SMOKE: lean regime + ROOT WINDOW ALIGNED TO TRAINER (the decisive
+# credit-horizon test). root_prompt_token_budget 12000->6500 est-tokens (~19.5k chars,
+# ~4.6k real tokens) so every fed root prompt + completion fits the 8192 loss window:
+# finalization turns train on ~100% of rollouts (was: dead on 53% under lean, 58% old).
+# vs the 40-step smoke: group_size 4->8 (batch_size stays 32 -> 4 prompts/step,
+# denser valid-sibling groups), max_iterations 20->12, sub_max_tokens 4096->2048,
+# context_chunk_chars 20000->12000 on the TRAIN env only.
+# Eval is unchanged from the 40-step smoke (chunk 20000, iter 20, sub 4096,
+# every 10 steps, n=25) so eval points are directly comparable across runs.
+output_dir = "/scratch/omeerdogan23/erlm/.research/EfficientRLM/outputs/smoke-qwen3-30b-bcplus-lean2-winaligned-60step"
+max_steps = 60
+seq_len = 8192
+
+[model]
+name = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+
+[wandb]
+project = "rlm-qwen3-30b"
+name = "smoke-qwen3-30b-bcplus-lean2-winaligned-60step"
+
+[deployment]
+gpus_per_node = 8
+num_train_gpus = 4
+num_infer_gpus = 4
+
+[trainer]
+
+[trainer.model]
+fused_lm_head_token_chunk_size = "auto"
+optimization_dtype = "bfloat16"
+reduce_dtype = "bfloat16"
+
+[trainer.model.ac]
+mode = "full"
+freq = 1
+
+[trainer.model.lora]
+rank = 32
+alpha = 64
+dropout = 0.0
+target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+
+[trainer.ckpt]
+interval = 10
+keep_interval = 10
+
+[trainer.ckpt.weights]
+save_adapter_separately = true
+
+[trainer.optim]
+lr = 5e-5
+
+[inference]
+gpu_memory_utilization = 0.90
+
+[inference.model]
+max_model_len = 16384
+enforce_eager = true
+
+[inference.parallel]
+tp = 4
+dp = 1
+
+[orchestrator]
+batch_size = 32
+group_size = 8
+
+[orchestrator.model.lora]
+name = "qwen3-30b-smoke-bcplus-lean-lora"
+
+[[orchestrator.post_batch_filters]]
+type = "repetition"
+enforce = true
+window = 3000
+prob_threshold = 0.99
+
+[[orchestrator.post_batch_filters]]
+type = "zero_advantage"
+enforce = true
+
+[orchestrator.ckpt]
+interval = 10
+keep_interval = 10
+
+[orchestrator.train.sampling]
+max_completion_tokens = 4096
+extra_body = { enable_thinking = false }
+
+[[orchestrator.train.env]]
+id = "browsecomp_plus"
+name = "browsecomp-plus-train"
+ratio = 1.0
+
+[orchestrator.train.env.advantage]
+type = "custom"
+import_path = "rlm_train.adaptive_group.adaptive_group_advantage"
+
+[orchestrator.train.env.advantage.kwargs]
+base = "correctness"
+beta_max = 0.20
+solve_floor = 0.25
+gamma = 1.0
+
+[orchestrator.train.env.args]
+root_prompt_token_budget = 6500
+num_examples = 125
+start_index = 0
+k = 50
+context_chunk_chars = 12000
+context_chunk_overlap = 400
+seed = 42
+max_iterations = 12
+sub_max_tokens = 2048
+min_iterations = 2
+min_subcall = 0
+reward_mode = "judge"
+judge_model = "openai/gpt-5-nano"
+reward_style = "correctness"
+
+[orchestrator.eval]
+interval = 10
+skip_first_step = false
+num_examples = 25
+group_size = 1
+
+[orchestrator.eval.sampling]
+max_completion_tokens = 4096
+extra_body = { enable_thinking = false }
+
+[[orchestrator.eval.env]]
+id = "browsecomp_plus"
+name = "browsecomp-plus-eval"
+num_examples = 25
+group_size = 1
+
+[orchestrator.eval.env.args]
+num_examples = 25
+start_index = 125
+k = 50
+context_chunk_chars = 20000
+context_chunk_overlap = 400
+seed = 42
+max_iterations = 20
+sub_max_tokens = 4096
+min_iterations = 2
+min_subcall = 0
+reward_mode = "judge"
+judge_model = "openai/gpt-5-nano"
+reward_style = "correctness"
