@@ -40,8 +40,7 @@ def test_multienv_config_train_envs_are_correctness_only():
     assert oolong["ratio"] == 1.0
     assert "group_size" not in oolong  # inherit top-level group_size=4
     assert oolong["args"]["dataset_name"] == "spam"
-    assert oolong["args"]["reward_style"] == "correctness"
-    assert oolong["args"]["shaping_coef"] == 0.0
+    assert "reward_style" not in oolong["args"]  # stock RLMTrainRubric only (3cb9dc2)
 
     bcp = _env_by_id(envs, "browsecomp_plus")
     assert bcp["ratio"] == 1.0
@@ -51,8 +50,7 @@ def test_multienv_config_train_envs_are_correctness_only():
     assert bcp["args"]["k"] == 50
     assert bcp["args"]["reward_mode"] == "judge"
     assert bcp["args"]["judge_model"] == "openai/gpt-5-nano"
-    assert bcp["args"]["reward_style"] == "correctness"
-    assert bcp["args"]["shaping_coef"] == 0.0
+    assert "reward_style" not in bcp["args"]  # stock RLMTrainRubric only (3cb9dc2)
 
 
 def test_multienv_config_eval_split_is_disjoint_from_train_split():
@@ -70,5 +68,4 @@ def test_multienv_config_eval_split_is_disjoint_from_train_split():
     assert bcp["args"]["k"] == 50
     assert bcp["args"]["reward_mode"] == "judge"
     assert bcp["args"]["judge_model"] == "openai/gpt-5-nano"
-    assert bcp["args"]["reward_style"] == "correctness"
-    assert bcp["args"]["shaping_coef"] == 0.0
+    assert "reward_style" not in bcp["args"]  # stock RLMTrainRubric only (3cb9dc2)
