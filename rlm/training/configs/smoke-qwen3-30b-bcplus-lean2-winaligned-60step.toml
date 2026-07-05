@@ -2,6 +2,9 @@
 # credit-horizon test). root_prompt_token_budget 12000->6500 est-tokens (~19.5k chars,
 # ~4.6k real tokens) so every fed root prompt + completion fits the 8192 loss window:
 # finalization turns train on ~100% of rollouts (was: dead on 53% under lean, 58% old).
+# Also restores upstream's min_subcall=1 (train side): zero-sub-call rollouts get
+# gated_reward=0 -> invalid at the advantage layer -> the measured no-delegation
+# shortcut (63% of rollouts, scoring 0.424 vs 0.334) stops being reward-optimal.
 # vs the 40-step smoke: group_size 4->8 (batch_size stays 32 -> 4 prompts/step,
 # denser valid-sibling groups), max_iterations 20->12, sub_max_tokens 4096->2048,
 # context_chunk_chars 20000->12000 on the TRAIN env only.
@@ -112,7 +115,7 @@ seed = 42
 max_iterations = 12
 sub_max_tokens = 2048
 min_iterations = 2
-min_subcall = 0
+min_subcall = 1
 reward_mode = "judge"
 judge_model = "openai/gpt-5-nano"
 reward_style = "correctness"
