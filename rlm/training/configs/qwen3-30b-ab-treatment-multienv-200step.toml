@@ -100,7 +100,7 @@ import_path = "rlm_train.adaptive_group.adaptive_group_advantage"
 
 [orchestrator.train.env.advantage.kwargs]
 base = "correctness"
-beta_max = 0.20
+beta_max = 0.15
 solve_floor = 0.25
 gamma = 1.0
 
@@ -126,7 +126,7 @@ import_path = "rlm_train.adaptive_group.adaptive_group_advantage"
 
 [orchestrator.train.env.advantage.kwargs]
 base = "correctness"
-beta_max = 0.20
+beta_max = 0.15
 solve_floor = 0.25
 gamma = 1.0
 
