@@ -177,8 +177,8 @@ ORCHESTRATOR_ADDENDUM = "\n\n".join(
             "can manipulate programmatically."
         ),
         (
-            "Sub-call budget is finite on two independent axes, and `llm_query_batched` only "
-            "parallelizes — it does not relax either. (1) Per-prompt capacity: a single "
+            "Budgets are finite on three independent axes, and `llm_query_batched` only "
+            "parallelizes — it does not relax any of them. (1) Per-prompt capacity: a single "
             "sub-call answers well only when its input stays modestly sized — a useful rough "
             "ceiling is ~12K tokens per prompt (roughly 36K–48K characters, less when the "
             "text is dense) so there is room for output. Pack each prompt close to that "
@@ -196,7 +196,13 @@ ORCHESTRATOR_ADDENDUM = "\n\n".join(
             "(e.g. a context far larger than ~20 × 12K-token chunks), don't brute-force it: "
             "filter aggressively in Python first to a tractable subset, or stage the task — "
             "a cheap coarse pass narrows candidates, then a targeted second pass extracts "
-            "from the survivors."
+            "from the survivors. (3) Your own context: everything you see — this prompt, "
+            "your turns, and every REPL output — must fit one ~16K-token model window, and "
+            "spent space never comes back. Printing large text is how rollouts die: one "
+            "printed 20K-character chunk consumes about a third of the whole window, and "
+            "the rollout then fails with no answer and scores zero. Keep every print under "
+            "~2K characters: counts, short quotes, candidate answers. To read bulk text, "
+            "send it to `llm_query` or `llm_query_batched`; never print it."
         ),
         (
             "Reserve your own tokens for high-level decisions: what to ask next, how to combine "

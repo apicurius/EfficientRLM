@@ -27,13 +27,16 @@ export RLM_TRAIN_WORKER_STARTUP_TIMEOUT_S=120
 export PRIME_RL_ROLLOUT_TIMEOUT_S=7200             # dispatcher deadline sweep (patched venv)
 
 # shadow the venv's old editable packages with the EfficientRLM tree
-export PYTHONPATH="$EFF/rlm/training/src:$EFF/rlm/training/environments/browsecomp_plus:$EFF/rlm/training/environments/oolong${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$EFF/rlm:$EFF/rlm/training/src:$EFF/rlm/training/environments/browsecomp_plus:$EFF/rlm/training/environments/oolong${PYTHONPATH:+:$PYTHONPATH}"
 
 cd "$PRL" || { echo "[smoke] cannot cd $PRL"; exit 1; }
 
 # hard gate: refuse to run if imports do not resolve to the EfficientRLM tree
 .venv/bin/python - <<'PY' || exit 1
 import rlm_train, browsecomp_plus, oolong, rlm_train.adaptive_group as ag
+import rlm.utils.prompts as _prompts
+assert "/EfficientRLM/" in _prompts.__file__, f"core rlm resolves OUTSIDE EfficientRLM: {_prompts.__file__}"
+print("[smoke] rlm core prompts ->", _prompts.__file__)
 from browsecomp_plus import _data
 for name, mod in [("rlm_train", rlm_train), ("browsecomp_plus", browsecomp_plus), ("oolong", oolong)]:
     path = mod.__file__

@@ -40,3 +40,14 @@ directories were removed after verification). The **initial commit is the pristi
 upstream baseline** — so `git diff <initial-commit>..HEAD` is the exact, complete
 record of every EfficientRLM modification to upstream. That audit anchor is the whole
 point: provenance is recoverable from `git log`, not from memory.
+
+## Core deviation 2 (2026-07-06, user-confirmed)
+`rlm/rlm/utils/prompts.py`: the sub-call budget bullet is extended from two axes
+to three — "(3) Your own context": states that the root transcript shares the
+~16K-token model window, that one printed 20K-char chunk consumes about a third
+of it and kills the rollout, and sets a ~2K-char per-print rule. Grounded in the
+multienv-20 smoke: 91% of context_length-dead BC+ rollouts contained a single
+~20,035-char chunk print, while clean rollouts printed a median-max of 1,062
+chars. Launchers now shadow core `rlm` from THIS tree via PYTHONPATH (with an
+import gate); previously `rlm.utils.prompts` resolved to the ERLM-main editable,
+verified byte-identical at the time of the switch.
