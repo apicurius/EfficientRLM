@@ -106,6 +106,8 @@ def load_environment(
         context_chunk_chars=context_chunk_chars,
         context_chunk_overlap=context_chunk_overlap,
     )
+    if reward_mode not in ("judge", "containment"):
+        raise ValueError(f"Unknown reward_mode: {reward_mode!r}; valid: ['judge', 'containment']")
     correctness = make_judge_score(judge_model) if reward_mode == "judge" else containment_score
     rubric = rlm_train.RLMTrainRubric(
         correctness=correctness,

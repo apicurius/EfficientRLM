@@ -373,3 +373,10 @@ def test_bcp_external_legacy_openai_judge_keeps_classic_args(monkeypatch):
     assert calls[0]["temperature"] == 0.0
     assert "max_completion_tokens" not in calls[0]
     assert "reasoning_effort" not in calls[0]
+
+def test_bcp_unknown_reward_mode_raises(monkeypatch):
+    import browsecomp_plus.env as bcp_env
+
+    monkeypatch.setattr(bcp_env, "_build_dataset", lambda **kw: [])
+    with pytest.raises(ValueError, match="Unknown reward_mode"):
+        bcp_env.load_environment(reward_mode="jugde")
