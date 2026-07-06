@@ -27,24 +27,24 @@ export RLM_TRAIN_WORKER_STARTUP_TIMEOUT_S=120
 export PRIME_RL_ROLLOUT_TIMEOUT_S=7200             # dispatcher deadline sweep (patched venv)
 
 # shadow the venv's old editable packages with the EfficientRLM tree
-export PYTHONPATH="$EFF/rlm:$EFF/rlm/training/src:$EFF/rlm/training/environments/browsecomp_plus:$EFF/rlm/training/environments/oolong${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$EFF/rlm:$EFF/rlm/training/src:$EFF/rlm/training/environments/browsecomp_plus:$EFF/rlm/training/environments/oolong:$EFF/rlm/training/environments/oolong_pairs:$EFF/rlm/training/environments/longbench_codeqa${PYTHONPATH:+:$PYTHONPATH}"
 
 cd "$PRL" || { echo "[smoke] cannot cd $PRL"; exit 1; }
 
 # hard gate: refuse to run if imports do not resolve to the EfficientRLM tree
-.venv/bin/python - <<'PY' || exit 1
-import rlm_train, browsecomp_plus, oolong, rlm_train.adaptive_group as ag
-import rlm.utils.prompts as _prompts
-assert "/EfficientRLM/" in _prompts.__file__, f"core rlm resolves OUTSIDE EfficientRLM: {_prompts.__file__}"
-print("[smoke] rlm core prompts ->", _prompts.__file__)
-from browsecomp_plus import _data
-for name, mod in [("rlm_train", rlm_train), ("browsecomp_plus", browsecomp_plus), ("oolong", oolong)]:
-    path = mod.__file__
-    assert "/EfficientRLM/" in path, f"{name} resolves OUTSIDE EfficientRLM: {path}"
-    print(f"[smoke] {name} -> {path}")
-print("[smoke] adaptive_group ->", ag.__file__)
-print("[smoke] browsecomp_plus._data ->", _data.__file__, "(restructured layout confirmed)")
-PY
+.venv/bin/python - <<'PYGATE' || exit 1
+import importlib
+mods = ["rlm", "rlm.utils.prompts", "rlm.utils.parsing",
+        "rlm_train", "rlm_train.env", "rlm_train.proxy", "rlm_train.rubric",
+        "rlm_train.adaptive_group", "rlm_train.worker", "rlm_train.repl.subprocess",
+        "browsecomp_plus", "browsecomp_plus._data", "browsecomp_plus.env",
+        "oolong", "oolong.env", "oolong_pairs.env", "longbench_codeqa.env"]
+for m in mods:
+    mod = importlib.import_module(m)
+    f = getattr(mod, "__file__", None) or str(list(getattr(mod, "__path__", ["?"]))[0])
+    assert "/EfficientRLM/" in str(f), f"{m} resolves OUTSIDE EfficientRLM: {f}"
+print(f"[smoke] import gate: all {len(mods)} project modules resolve into EfficientRLM")
+PYGATE
 
 RESUME_ARGS=()
 if [ -n "$RESUME" ]; then RESUME_ARGS=(--ckpt.resume-step "$RESUME"); fi

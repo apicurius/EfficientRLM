@@ -27,7 +27,7 @@ export RLM_TRAIN_WORKER_STARTUP_TIMEOUT_S=120
 export PRIME_RL_ROLLOUT_TIMEOUT_S=7200             # dispatcher deadline sweep (patched venv)
 
 # shadow the venv's old editable packages with the EfficientRLM tree
-export PYTHONPATH="$EFF/rlm/training/src:$EFF/rlm/training/environments/browsecomp_plus:$EFF/rlm/training/environments/oolong${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$EFF/rlm:$EFF/rlm/training/src:$EFF/rlm/training/environments/browsecomp_plus:$EFF/rlm/training/environments/oolong${PYTHONPATH:+:$PYTHONPATH}"
 
 cd "$PRL" || { echo "[smoke] cannot cd $PRL"; exit 1; }
 
