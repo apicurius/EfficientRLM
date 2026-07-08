@@ -32,3 +32,6 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# vendored prime-rl dependency — not shipped in this repo
+/prime-rl/
