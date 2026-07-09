@@ -131,6 +131,7 @@ def adaptive_group_advantage(
     solve_floor: float = 0.25,
     gamma: float = 1.0,
     cost_basis: str = DEFAULT_COST_BASIS,
+    min_span: float = 0.0,
 ) -> AdvantageOutputs:
     """Validity-gated, group-mean-centered advantage.
 
@@ -170,7 +171,7 @@ def adaptive_group_advantage(
                 valid_costs = [costs[i] for i in valid_idx]
                 lo, hi = min(valid_costs), max(valid_costs)
                 span = hi - lo
-                if span > 0.0:
+                if span > 0.0 and span >= min_span:
                     for i in valid_idx:
                         normalized_cost[i] = (costs[i] - lo) / span
                         shaped[i] = 1.0 - beta * normalized_cost[i]

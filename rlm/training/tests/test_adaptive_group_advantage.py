@@ -256,6 +256,61 @@ def test_cost_basis_log_helpers_counts_repl_default_does_not():
     assert h[0] > h[1]
 
 
+def test_min_span_default_zero_still_ranks_tiny_spans():
+    # Default min_span=0.0 is byte-identical to the old behavior: a one-subcall
+    # cost difference (span = log1p(4)-log1p(3) ~= 0.22) still re-ranks.
+    traces = [
+        _trace(gated=1.0, iters=5.0, subcalls=3.0),
+        _trace(gated=1.0, iters=5.0, subcalls=4.0),
+        _trace(gated=1.0, iters=5.0, subcalls=3.0),
+        _trace(gated=1.0, iters=5.0, subcalls=4.0),
+    ]
+    out = _adv(traces, beta_max=0.15).advantages
+    assert out[0] > 0.0 > out[1]
+
+
+def test_min_span_gates_noise_span_all_valid_group_to_zero():
+    # Same group under min_span=1.0: the 0.22 span is below the noise floor,
+    # re-ranking is skipped, the all-valid group centers to exactly 0.0
+    # (and is then dropped by the zero_advantage filter, like an equal-cost group).
+    traces = [
+        _trace(gated=1.0, iters=5.0, subcalls=3.0),
+        _trace(gated=1.0, iters=5.0, subcalls=4.0),
+        _trace(gated=1.0, iters=5.0, subcalls=3.0),
+        _trace(gated=1.0, iters=5.0, subcalls=4.0),
+    ]
+    out = _adv(traces, beta_max=0.15, min_span=1.0).advantages
+    assert out == [0.0, 0.0, 0.0, 0.0]
+    for t in traces:
+        assert t.metrics["adaptive_normalized_cost"] == 0.0
+        assert t.metrics["adaptive_shaped"] == 1.0
+
+
+def test_min_span_keeps_ranking_above_the_floor():
+    # A real cost gap (span = 7 turns) clears min_span=1.0 and is ranked as before.
+    traces = [
+        _trace(gated=1.0, iters=3.0),
+        _trace(gated=1.0, iters=10.0),
+        _trace(gated=1.0, iters=3.0),
+        _trace(gated=1.0, iters=10.0),
+    ]
+    out = _adv(traces, beta_max=0.15, min_span=1.0).advantages
+    assert out[0] > 0.0 > out[1]
+
+
+def test_min_span_mixed_group_reverts_to_correctness_contrast():
+    # In a mixed group a sub-floor span only removes the cost wiggle between the
+    # valid rollouts; the correctness contrast is untouched.
+    traces = [
+        _trace(gated=1.0, iters=5.0, subcalls=3.0),
+        _trace(gated=1.0, iters=5.0, subcalls=4.0),
+        _trace(gated=0.0, has_final=False, stop="max_turns"),
+    ]
+    out = _adv(traces, beta_max=0.15, min_span=1.0).advantages
+    assert out == _centered([1.0, 1.0, 0.0])
+    assert out[0] == out[1] > out[2]
+
+
 def test_records_adaptive_telemetry_for_base_reward():
     # base="reward": valid rollouts keep their style reward; invalid zeroed.
     import pytest
