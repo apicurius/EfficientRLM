@@ -107,8 +107,26 @@ async def containment_score(info, state: vf.State, **_kw: Any) -> float:
     return 0.0
 
 
+# Reasoning-model families reject the reference call parameters (temperature=0.0
+# is refused and the budget param is max_completion_tokens) — for them the call
+# is translated, which is the one deviation from the reference; all judging
+# logic is otherwise 1:1. The 64-token budget is safe at minimal effort:
+# measured on gpt-5-nano, this verdict prompt spends 0 reasoning tokens and
+# ~18 output tokens.
+_REASONING_JUDGE_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+
+
 def make_judge_score(judge_model: str | None = None):
-    """Binary is_correct judge scorer (external OpenAI model or rollout client)."""
+    """Binary is_correct judge scorer, aligned with the reference judge.
+
+    Reference semantics (``llm_judge.py`` port): predicted/expected are
+    whitespace-stripped only (no Exact-Answer extraction), the judge is called
+    once with ``max_tokens=64, temperature=0.0``, and any judge failure scores
+    False. Sole deviation: reasoning-family judge models (e.g. gpt-5-nano)
+    reject those parameters, so their call is translated to
+    ``max_completion_tokens=64, reasoning_effort="minimal"`` (no temperature
+    control — such judges remain sampling-nondeterministic).
+    """
 
     async def score(info, state: vf.State, **_kw: Any) -> float:
         final = str(state.get("rlm_final_answer") or state.get("final_answer") or "")
@@ -117,8 +135,8 @@ def make_judge_score(judge_model: str | None = None):
         meta = json.loads(info) if isinstance(info, str) else info
         prompt = JUDGE_PROMPT.format(
             query=str(meta.get("raw_question") or meta.get("id") or ""),
-            expected=str(meta.get("answer", "")),
-            predicted=_extract_exact_answer(final),
+            expected=str(meta.get("answer", "")).strip(),
+            predicted=final.strip(),
         )
         model = str(judge_model or state.get("model") or "")
         if model.startswith("openai/"):
@@ -128,9 +146,9 @@ def make_judge_score(judge_model: str | None = None):
                 )
             jm = model.split("/", 1)[1]
             args = (
-                {"max_completion_tokens": 512, "reasoning_effort": "minimal"}
-                if jm.startswith(("gpt-5", "o1", "o3", "o4"))
-                else {"max_tokens": 256, "temperature": 0.0}
+                {"max_completion_tokens": 64, "reasoning_effort": "minimal"}
+                if jm.startswith(_REASONING_JUDGE_PREFIXES)
+                else {"max_tokens": 64, "temperature": 0.0}
             )
             try:
                 resp = await _get_openai_judge_client().chat.completions.create(
@@ -139,18 +157,18 @@ def make_judge_score(judge_model: str | None = None):
                     **args,
                 )
                 raw = resp.choices[0].message.content or ""
-            except Exception as e:
-                raise RuntimeError(f"BrowseComp+ external judge {model!r} failed: {e}") from e
+            except Exception:
+                return 0.0
             return 1.0 if _parse_verdict(raw) else 0.0
         client = state.get("client")
         if client is None:
-            return await containment_score(info, state, **_kw)
+            return 0.0
         try:
             response = await client.get_response(
                 prompt=[{"role": "user", "content": prompt}],
                 model=model,
                 tools=None,
-                sampling_args={"max_tokens": 256, "temperature": 0.0},
+                sampling_args={"max_tokens": 64, "temperature": 0.0},
                 state={"trajectory": []},
             )
             raw_content = getattr(getattr(response, "message", None), "content", "")
@@ -165,7 +183,7 @@ def make_judge_score(judge_model: str | None = None):
             else:
                 raw = str(raw_content)
         except Exception:
-            return await containment_score(info, state, **_kw)
+            return 0.0
         return 1.0 if _parse_verdict(raw) else 0.0
 
     score.__name__ = "browsecomp_plus_judge_score"
