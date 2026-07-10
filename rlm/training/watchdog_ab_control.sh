@@ -18,6 +18,8 @@ NODE=ai16
 EFF=/scratch/omeerdogan23/erlm/.research/EfficientRLM
 OUT="$EFF/outputs/qwen3-30b-ab-control-multienv-200step"
 SESSION="ab-control"
+FORCE_RESUME_STEP=80
+WANDB_SHARED_RUN_ID=dcb6e40a7d5147bba804a7aef26671a1
 # Fixed log path (not timestamped): the supervisor appends, and any tail -f
 # watching the launch log keeps streaming across restarts.
 CONSOLE_LOG="$EFF/outputs/ab-control-console-fresh-20260707.log"
@@ -56,5 +58,5 @@ if pgrep -u "$USER" -f '[s]upervise_ab_control.sh|[r]un_ab_control.sh' >/dev/nul
   exit 0
 fi
 
-echo "[watchdog] $(date '+%F %T') control: creating tmux session $SESSION on $NODE"
-rnode "$TMUX new-session -d -s $SESSION \"SMOKE_LOG=$CONSOLE_LOG $EFF/rlm/training/supervise_ab_control.sh\""
+echo "[watchdog] $(date '+%F %T') control: creating tmux session $SESSION on $NODE (force resume=$FORCE_RESUME_STEP, wandb=$WANDB_SHARED_RUN_ID)"
+rnode "$TMUX new-session -d -s $SESSION \"SMOKE_LOG=$CONSOLE_LOG CONTROL_FORCE_RESUME_STEP=$FORCE_RESUME_STEP WANDB_SHARED_RUN_ID=$WANDB_SHARED_RUN_ID $EFF/rlm/training/supervise_ab_control.sh\""

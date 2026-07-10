@@ -13,6 +13,8 @@ DONE="$OUT/ARM_DONE"
 FAILED="$OUT/ARM_FAILED"
 HOLDER=1263387
 MAX_STEP=200
+FORCE_RESUME_STEP="${CONTROL_FORCE_RESUME_STEP:-}"
+FORCE_RELEASE="$OUT/.force_resume_step_${FORCE_RESUME_STEP:-none}.released"
 
 # Latest checkpoint step where BOTH the trainer shard save completed
 # (.metadata written last by dcp_save) AND the orchestrator state exists —
@@ -27,9 +29,30 @@ resolve_resume_step() {
       if [ -z "$best_both" ] || [ "$n" -gt "$best_both" ]; then best_both="$n"; fi
     fi
   done
+  # Incident recovery: force the first relaunch from the last trusted checkpoint
+  # (currently step 80, before the BrowseComp+ judge stopped firing).  Once that
+  # forced relaunch produces a newer complete checkpoint, release the force and
+  # return to normal "latest checkpoint" supervision for later restarts.
+  if [ -n "$FORCE_RESUME_STEP" ] && [ ! -e "$FORCE_RELEASE" ]; then
+    echo "$FORCE_RESUME_STEP"
+    return
+  fi
   # Never fall back to a fresh start when ANY complete trainer ckpt exists —
   # fresh wipes every rollout/eval on disk (clean_future_steps -1).
   echo "${best_both:-$best_trainer}"
+}
+
+latest_complete_step_after_force() {
+  [ -n "$FORCE_RESUME_STEP" ] || return 1
+  local best=""
+  for d in "$OUT"/checkpoints/step_*; do
+    [ -e "$d/trainer/.metadata" ] || continue
+    local n="${d##*_}"
+    [ "$n" -gt "$FORCE_RESUME_STEP" ] || continue
+    [ -d "$OUT/run_default/checkpoints/step_$n" ] || continue
+    if [ -z "$best" ] || [ "$n" -gt "$best" ]; then best="$n"; fi
+  done
+  [ -n "$best" ] && echo "$best"
 }
 
 FASTFAILS=0
@@ -39,12 +62,23 @@ while :; do
   if [ -n "$STEP" ]; then
     RESUME_ARGS=("$STEP")
   fi
-  echo "[supervise] $(date '+%F %T') control arm launching (resume=${STEP:-fresh})" >> "$LOG"
+  if [ -n "$FORCE_RESUME_STEP" ] && [ ! -e "$FORCE_RELEASE" ]; then
+    echo "[supervise] $(date '+%F %T') control arm launching (forced resume=$STEP; release after first complete ckpt > $FORCE_RESUME_STEP)" >> "$LOG"
+  else
+    echo "[supervise] $(date '+%F %T') control arm launching (resume=${STEP:-fresh})" >> "$LOG"
+  fi
   START=$(date +%s)
   srun --overlap --jobid="$HOLDER" --gres=gpu:rtx_a6000:8 -n1 \
     --cpus-per-task=48 --mem=0 --time=7-00:00:00 bash -l \
     "$EFF/rlm/training/run_ab_control.sh" "${RESUME_ARGS[@]}" >> "$LOG" 2>&1
   RC=$?
+  if [ -n "$FORCE_RESUME_STEP" ] && [ ! -e "$FORCE_RELEASE" ]; then
+    NEWER="$(latest_complete_step_after_force || true)"
+    if [ -n "$NEWER" ]; then
+      echo "[supervise] $(date '+%F %T') forced resume released: complete checkpoint step_$NEWER exists" >> "$LOG"
+      touch "$FORCE_RELEASE"
+    fi
+  fi
   ELAPSED=$(( $(date +%s) - START ))
   if [ "$RC" -eq 0 ]; then
     if [ -d "$OUT/run_default/rollouts/step_$MAX_STEP" ]; then

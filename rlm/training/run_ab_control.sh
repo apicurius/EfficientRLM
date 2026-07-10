@@ -23,6 +23,12 @@ export HF_HOME=/scratch/omeerdogan23/hf_cache HF_HUB_OFFLINE=1 HF_HUB_DISABLE_XE
 export UV_CACHE_DIR=/tmp/uvcache_$USER
 export NCCL_P2P_DISABLE=1 NCCL_IB_DISABLE=1        # ai16 A6000: no NVLink
 export WANDB_MODE=online WANDB_ENTITY=omeerdogan-koc-university
+# Resume this interrupted control arm into the same W&B run unless the caller
+# deliberately overrides it.  prime-rl reads WANDB_SHARED_RUN_ID and uses
+# wandb.init(..., resume="allow").
+if [ -n "$RESUME" ]; then
+  export WANDB_SHARED_RUN_ID="${WANDB_SHARED_RUN_ID:-dcb6e40a7d5147bba804a7aef26671a1}"
+fi
 export RLM_TRAIN_WORKER_STARTUP_TIMEOUT_S=120
 export PRIME_RL_ROLLOUT_TIMEOUT_S=7200             # dispatcher deadline sweep (patched venv)
 
@@ -50,6 +56,7 @@ RESUME_ARGS=()
 if [ -n "$RESUME" ]; then RESUME_ARGS=(--ckpt.resume-step "$RESUME"); fi
 
 echo "[control] ===== START ab-control-multienv-200step $(date +%F_%H:%M:%S) host=$(hostname) resume=${RESUME:-fresh} ====="
+[ -n "${WANDB_SHARED_RUN_ID:-}" ] && echo "[control] W&B resume id: $WANDB_SHARED_RUN_ID"
 uv run --no-sync rl @ "$CFG" "${RESUME_ARGS[@]}" 2>&1
 rc=$?
 echo "[control] ===== END rc=$rc $(date +%F_%H:%M:%S) ====="
