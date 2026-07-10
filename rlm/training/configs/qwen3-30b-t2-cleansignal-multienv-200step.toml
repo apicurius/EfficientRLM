@@ -130,7 +130,7 @@ gamma = 1.0
 min_span = 1.0
 
 [orchestrator.train.env.args]
-num_examples = 680
+num_examples = 655
 start_index = 0
 k = 50
 seed = 42
@@ -174,7 +174,7 @@ group_size = 1
 
 [orchestrator.eval.env.args]
 num_examples = 25
-start_index = 680
+start_index = 655
 k = 50
 seed = 42
 max_iterations = 20
