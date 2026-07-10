@@ -1,9 +1,14 @@
-"""LM-as-a-judge scoring for BrowseComp-Plus.
+"""LM-as-a-judge scoring for BrowseComp-Plus (internal yardstick).
 
-The judge prompt and verdict parsing are verbatim from the BrowseComp-Plus
-reference (texttron/BrowseComp-Plus ``llm_judge.py``; reference default judge
-gpt-5-nano). The released benchmark numbers come from this binary ``is_correct``
-JSON judge, so matching it keeps our accuracy on the model-card yardstick.
+The judge prompt and verdict parsing are ported verbatim from the RLM paper's
+private experiment harness via alexzhang13/LMxLM
+(``lmxlm/environments/lm_to_program/browsecomp_plus/_judge.py``) — NOT from the
+official Texttron/BrowseComp-Plus grader, which uses the BrowseComp
+GRADER_TEMPLATE with a ``correct: yes|no`` verdict judged by Qwen3-32B
+(or legacy GPT-4.1) and is stricter (no partial-answer credit). Scores from
+this ``is_correct`` JSON judge are an internal training-reward metric, NOT
+comparable to official leaderboard numbers; for reportable accuracy, rescore
+saved outputs offline with the official ``scripts_evaluation/evaluate_run.py``.
 A deterministic normalized-containment proxy is the non-judge fallback.
 """
 
