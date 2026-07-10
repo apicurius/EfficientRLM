@@ -8,9 +8,10 @@ user_prologue = """BrowseComp-Plus environment notes:
   short evidence phrases.
 - First filter/rank `context` in Python using entities, dates, aliases,
   titles, and relation clues from the question; then screen the remaining
-  chunks with `llm_query_batched` and a strict contract ("Reply YES only if
-  this chunk matches these criteria, else NO"), and extract details only from
-  the YES survivors with terse structured outputs
+  chunks — all of them, if Python filtering was not clearly decisive — with
+  `llm_query_batched` and a strict contract ("Reply YES only if this chunk
+  matches these criteria, else NO"), and extract details only from the YES
+  survivors with terse structured outputs
   (`candidate_answer | evidence phrase | confidence`, or `NO_MATCH`).
 - Every sub-prompt must include the chunk text it should read — never send
   bare search-style queries, and never leave a sub-call's return value
