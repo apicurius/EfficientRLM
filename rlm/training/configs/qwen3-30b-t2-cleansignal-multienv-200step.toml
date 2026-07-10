@@ -41,11 +41,6 @@ save_adapter_separately = true
 [trainer.optim]
 lr = 5e-5
 
-[trainer.scheduler]
-type = "cosine"
-warmup_steps = 10
-min_lr = 1e-5
-
 [inference]
 gpu_memory_utilization = 0.90
 
