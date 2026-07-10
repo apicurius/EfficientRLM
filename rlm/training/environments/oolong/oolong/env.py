@@ -24,6 +24,9 @@ user_prologue = """OOLONG environment notes:
 - For semantic long-context retrieval or aggregation, split the context into
   chunky windows, use `llm_query_batched`, and aggregate compact results in
   Python.
+- Labels/categories named in the question are annotations, not stored in the
+  context text — never keyword-match them; classify with `llm_query_batched`
+  (many lines per prompt, label-only outputs) and aggregate in Python.
 - Keep final answers short: a single token / word / date / label / comparison
   phrase / integer as required by the question.
 - When ready, set `answer["content"]` to ONLY the final answer and then
