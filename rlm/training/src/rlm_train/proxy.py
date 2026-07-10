@@ -57,25 +57,14 @@ def _flatten_prompt(prompt: str | list) -> str:
                 return str(content)
     return str(prompt)
 
-def _coerce_message_item(item: Any) -> Any:
-    if isinstance(item, str):
-        return {"role": "user", "content": item}
-    if isinstance(item, dict):
-        if "role" in item:
-            return dict(item)
-        return {"role": "user", "content": item.get("content", "")}
-    if hasattr(item, "role") and hasattr(item, "content"):
-        return item
-    return {"role": "user", "content": str(item)}
-
 
 def _coerce_messages(prompt: str | list) -> list:
     if isinstance(prompt, str):
         raw: list = [{"role": "user", "content": prompt}]
     elif isinstance(prompt, list):
-        raw = [_coerce_message_item(m) for m in prompt]
+        raw = prompt
     else:
-        raw = [_coerce_message_item(prompt)]
+        raise ValueError(f"Unsupported prompt type: {type(prompt)}")
     try:
         from verifiers.utils.message_utils import from_raw_message
     except Exception:
