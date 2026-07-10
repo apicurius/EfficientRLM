@@ -1,12 +1,5 @@
-# Qwen3-30B OOLONG smoke: correctness-only control.
-# Based on rlm/training/configs/rlm-qwen3-30b-example.toml, migrated to the
-# current prime-rl config signatures:
-#   - [[orchestrator.post_batch_filters]] (not [[orchestrator.filters]])
-#   - skip_first_step = false for base-model step-0 eval (old eval_base_model=true)
-#   - group_size (not rollouts_per_example)
-# Treatment files differ only in output/run labels and reward args.
-output_dir = "/scratch/omeerdogan23/erlm/.research/EfficientRLM/outputs/smoke-qwen3-30b-correctness-oolong"
-max_steps = 20
+output_dir = "/scratch/omeerdogan23/erlm/.research/EfficientRLM/outputs/qwen3-30b-ab-treatment-multienv-200step"
+max_steps = 200
 seq_len = 8192
 
 [model]
@@ -14,7 +7,7 @@ name = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
 [wandb]
 project = "rlm-qwen3-30b"
-name = "qwen3-30b-smoke-correctness-oolong"
+name = "qwen3-30b-ab-treatment-multienv-200step"
 
 [deployment]
 gpus_per_node = 8
@@ -36,7 +29,6 @@ freq = 1
 rank = 32
 alpha = 64
 dropout = 0.0
-# Attention-only LoRA for the smoke (no MLP projection adapters).
 target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
 
 [trainer.ckpt]
@@ -44,7 +36,6 @@ interval = 20
 keep_interval = 20
 
 [trainer.ckpt.weights]
-# Save PEFT-compatible raw adapters under weights/step_N/lora_adapters/.
 save_adapter_separately = true
 
 [trainer.optim]
@@ -63,11 +54,14 @@ dp = 1
 
 [orchestrator]
 batch_size = 32
-group_size = 2
+group_size = 4
 
 [orchestrator.model.lora]
-# Stable adapter name used by vLLM when prime-rl hot-loads LoRA updates.
-name = "qwen3-30b-smoke-correctness-oolong-lora"
+name = "qwen3-30b-t2-control-lora"
+
+[[orchestrator.pre_batch_filters]]
+type = "zero_advantage"
+enforce = true
 
 [[orchestrator.post_batch_filters]]
 type = "repetition"
@@ -89,8 +83,19 @@ extra_body = { enable_thinking = false }
 
 [[orchestrator.train.env]]
 id = "oolong"
-name = "smoke-oolong-spam-train"
+name = "oolong-spam-train"
 ratio = 1.0
+
+[orchestrator.train.env.advantage]
+type = "custom"
+import_path = "rlm_train.adaptive_group.adaptive_group_advantage"
+
+[orchestrator.train.env.advantage.kwargs]
+base = "correctness"
+beta_max = 0.0
+solve_floor = 0.25
+gamma = 1.0
+min_span = 1.0
 
 [orchestrator.train.env.args]
 dataset_name = "spam"
@@ -102,13 +107,37 @@ max_iterations = 20
 sub_max_tokens = 4096
 min_iterations = 2
 min_subcall = 0
-# Shared resource telemetry/scales. For harness1 these feed the additive
-# resource penalty; for efficiency they feed the gated efficiency bonus.
+
+[[orchestrator.train.env]]
+id = "browsecomp_plus"
+name = "browsecomp-plus-train"
+ratio = 1.0
+
+[orchestrator.train.env.advantage]
+type = "custom"
+import_path = "rlm_train.adaptive_group.adaptive_group_advantage"
+
+[orchestrator.train.env.advantage.kwargs]
+base = "correctness"
+beta_max = 0.0
+solve_floor = 0.25
+gamma = 1.0
+min_span = 1.0
+
+[orchestrator.train.env.args]
+num_examples = 655
+start_index = 0
+k = 50
+seed = 42
+max_iterations = 20
+sub_max_tokens = 4096
+min_iterations = 2
+min_subcall = 0
+reward_mode = "judge"
+judge_model = "openai/gpt-5-nano"
 
 [orchestrator.eval]
 interval = 20
-# Current prime-rl spelling for the old eval_base_model=true behavior:
-# run the base-model eval at step 0 before any trainer update.
 skip_first_step = false
 num_examples = 25
 group_size = 1
@@ -119,7 +148,7 @@ extra_body = { enable_thinking = false }
 
 [[orchestrator.eval.env]]
 id = "oolong"
-name = "smoke-oolong-trec-coarse-eval"
+name = "oolong-trec-coarse-eval"
 num_examples = 25
 group_size = 1
 
@@ -131,3 +160,21 @@ exclude_numeric = false
 num_examples = 25
 max_iterations = 20
 sub_max_tokens = 4096
+
+[[orchestrator.eval.env]]
+id = "browsecomp_plus"
+name = "browsecomp-plus-eval"
+num_examples = 25
+group_size = 1
+
+[orchestrator.eval.env.args]
+num_examples = 25
+start_index = 655
+k = 50
+seed = 42
+max_iterations = 20
+sub_max_tokens = 4096
+min_iterations = 2
+min_subcall = 0
+reward_mode = "judge"
+judge_model = "openai/gpt-5-nano"
