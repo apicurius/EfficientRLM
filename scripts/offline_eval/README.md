@@ -45,5 +45,25 @@ Analysis: 02_summarize.py table; per-rollout JSONLs -> ab_paired_cost.py
     POLICY_FILTER=t2T  bash scripts/offline_eval/01_run_evals.sh
     # terminal B:
     BASE_URL=http://localhost:8001/v1 POLICY_FILTER=mit bash scripts/offline_eval/01_run_evals.sh
-    # T-final later: fetch adapter, restart leg A server, then:
-    # POLICIES_OVERRIDE=t2T_final bash scripts/offline_eval/01_run_evals.sh
+    # t2T_final is the default now (step-200 adapter uploaded). To also run t2T_120:
+    # POLICIES_OVERRIDE="Qwen/Qwen3-30B-A3B-Instruct-2507 t2T_120 t2T_final" bash scripts/offline_eval/01_run_evals.sh
+
+## 8x RTX6000 quickstart (once training's GPUs free up)
+Same 1-GPU-per-replica model, just more replicas: default split is 5 "ours"
+(base+adapters, one server each) + 3 "authors" replicas — matches ours
+covering base + t2T_final (t2T_120 conditional) vs authors' 1 policy. Override
+with OURS_GPUS / AUTHORS_GPUS (space-separated indices) and N_OURS / N_AUTHORS
+(must match) for a different split.
+
+    bash scripts/offline_eval/00a_fetch_adapters.sh   # pulls both t2T_120 and t2T_final (both uploaded)
+    bash scripts/offline_eval/00_serve_8gpu.sh &      # 5 ours (:8000-8004) + 3 authors (:8005-8007)
+    # wait for servers to come up, then:
+    DRY=1 bash scripts/offline_eval/01_run_evals_8gpu.sh   # smoke — check sub-calls nonzero across shards
+    bash scripts/offline_eval/01_run_evals_8gpu.sh
+    python scripts/offline_eval/02_summarize.py
+    # add t2T_120 back only if t2T_final shows an oolong deficit:
+    OURS_POLICIES="Qwen t2T_120 t2T_final" bash scripts/offline_eval/01_run_evals_8gpu.sh
+
+SUITE_FILTER=<substr> (new, alongside POLICY_FILTER) is what the 8gpu launcher
+uses to shard the 6 suites per policy across replicas — set it directly on
+01_run_evals.sh if you need a custom split beyond what the launcher does.
