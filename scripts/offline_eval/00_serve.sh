@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # vLLM server, tp=4: base + LoRA adapters as lora-modules (mirrors run inference.toml).
 set -euo pipefail
+export CUDA_VISIBLE_DEVICES=${GPUS:-0}
 cd "$(dirname "$0")"
 A=$PWD/adapters
 VLLM=$(command -v vllm || echo ../../.venv-eval/bin/vllm)
@@ -13,4 +14,4 @@ exec $VLLM serve Qwen/Qwen3-30B-A3B-Instruct-2507 \
   --gpu-memory-utilization 0.9 --enforce-eager \
   --enable-lora --max-lora-rank 32 --max-loras 8 \
   ${LORAS:+--lora-modules$LORAS} \
-  --port 8000 --seed 0
+  --port ${PORT:-8000} --seed 0

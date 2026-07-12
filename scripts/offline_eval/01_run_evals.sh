@@ -7,8 +7,10 @@ ENVDIR=$PWD/../../rlm/training/environments
 VF=$(command -v vf-eval || echo $PWD/../../.venv-eval/bin/vf-eval)
 OUT=${OUT:-$PWD/../../outputs/offline_eval_$(date +%Y%m%d)}
 BASE_URL=${BASE_URL:-http://localhost:8000/v1}
+export DUMMY_API_KEY=dummy
 SAMP='{"max_completion_tokens":4096,"extra_body":{"enable_thinking":false}}'
-POLICIES=(Qwen/Qwen3-30B-A3B-Instruct-2507 t2T_final mit-oasys/rlm-qwen3-30b-a3b-v0.1)
+if [ -n "${POLICIES_OVERRIDE:-}" ]; then read -ra POLICIES <<< "$POLICIES_OVERRIDE"; else POLICIES=(Qwen/Qwen3-30B-A3B-Instruct-2507 t2T_120 mit-oasys/rlm-qwen3-30b-a3b-v0.1); fi
+# t2T_final: add via POLICIES_OVERRIDE (or edit) once the step-200 adapter is uploaded
 # t2T_120: conditional — add above if t2T_final shows an oolong deficit. t2C: when control finishes.
 N_TREC=50; N_PAIRS=20; N_BC=150; N_CODEQA=50; N_TREC_EXT=200; N_SPAM=200
 if [ "${DRY:-0}" = "1" ]; then N_TREC=3; N_PAIRS=3; N_BC=3; N_CODEQA=3; N_TREC_EXT=0; N_SPAM=0; fi
@@ -17,7 +19,7 @@ run() { local env=$1 n=$2 pol=$3 args=$4 name=$5
   [ "$n" = "0" ] && return 0
   case "$pol" in *"${POLICY_FILTER:-}"*) ;; *) return 0;; esac
   $VF "$env" --env-dir-path "$ENVDIR" \
-    --api-base-url "$BASE_URL" --api-key-var NONE --model "$pol" \
+    --api-base-url "$BASE_URL" --api-key-var DUMMY_API_KEY --model "$pol" \
     --num-examples "$n" --rollouts-per-example 1 --max-concurrent 16 \
     --sampling-args "$SAMP" --env-args "$args" \
     --save-results --output-dir "$OUT/$name/${pol//\//_}" --disable-tui

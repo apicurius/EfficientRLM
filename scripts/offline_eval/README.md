@@ -35,3 +35,15 @@ start=655, codeqa n=50) + our extensions (trec n=200, spam@131k n=200
 disentangler). VERIFY oolong_pairs/codeqa env-args vs env READMEs on dry run.
 Analysis: 02_summarize.py table; per-rollout JSONLs -> ab_paired_cost.py
 (both-correct paired cost estimand = pre-registered primary).
+
+## 4x RTX6000 parallel quickstart (both legs at once)
+    GPUS=0 PORT=8000 bash scripts/offline_eval/00_serve.sh &          # base+adapters
+    GPUS=1 PORT=8001 bash scripts/offline_eval/00b_serve_authors.sh & # authors
+    # terminal A:
+    DRY=1 bash scripts/offline_eval/01_run_evals.sh                                        # smoke vs :8000
+    POLICY_FILTER=Qwen bash scripts/offline_eval/01_run_evals.sh
+    POLICY_FILTER=t2T  bash scripts/offline_eval/01_run_evals.sh
+    # terminal B:
+    BASE_URL=http://localhost:8001/v1 POLICY_FILTER=mit bash scripts/offline_eval/01_run_evals.sh
+    # T-final later: fetch adapter, restart leg A server, then:
+    # POLICIES_OVERRIDE=t2T_final bash scripts/offline_eval/01_run_evals.sh

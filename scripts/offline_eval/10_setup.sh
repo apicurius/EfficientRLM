@@ -6,6 +6,7 @@ command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 uv venv .venv-eval --python 3.12
 source .venv-eval/bin/activate
 uv pip install "vllm==0.22.0" "huggingface_hub[cli]"
+uv pip install -e "rlm/training"   # rlm-train: envs depend on it
 for e in oolong oolong_pairs browsecomp_plus longbench_codeqa; do
   uv pip install -e "rlm/training/environments/$e"
 done
