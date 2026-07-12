@@ -9,7 +9,7 @@ LORAS=""
 [ -d "$A/t2T_120" ]   && LORAS="$LORAS t2T_120=$A/t2T_120"
 [ -d "$A/t2C" ]       && LORAS="$LORAS t2C=$A/t2C"
 exec $VLLM serve Qwen/Qwen3-30B-A3B-Instruct-2507 \
-  --tensor-parallel-size 4 --max-model-len 16384 \
+  --tensor-parallel-size ${TP:-1} --max-model-len 16384 \
   --gpu-memory-utilization 0.9 --enforce-eager \
   --enable-lora --max-lora-rank 32 --max-loras 8 \
   ${LORAS:+--lora-modules$LORAS} \

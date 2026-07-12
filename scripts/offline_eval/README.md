@@ -5,8 +5,10 @@ AUTHORS correctness-only (mit-oasys/rlm-qwen3-30b-a3b-v0.1), OUR t2T_final
 (step-200 LoRA from HF). t2T_120 = conditional (uncomment if T-final shows an
 oolong deficit); t2C added when the control finishes.
 
-## GPUs
-4x 48GB (A6000/A40/L40S class): one vLLM server tp=4, max_model_len=16384
+## GPUs (RTX 6000 Pro 92GB)
+92GB cards fit the 30B bf16 (~57GB) on ONE GPU: default tp=1. 1 GPU = minimum;
+2 GPUs = run both serve legs in parallel; 4 GPUs = add replicas for concurrency
+(export TP=2/4 to shard instead if preferred). max_model_len=16384
 (the RLM scaffold holds long contexts in the REPL — the model never sees >16k).
 base + LoRA adapters share one server (enable_lora); the authors' model gets
 its own serve leg (same 4 GPUs, sequential).
