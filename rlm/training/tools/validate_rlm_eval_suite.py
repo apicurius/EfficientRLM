@@ -33,10 +33,10 @@ PACKAGES = {
 
 # Full-text pins. A prologue edit MUST update the hash here in the same commit.
 PROLOGUE_SHA256 = {
-    "oolong": "08b4512dc465a55080f65e023c30fe49ec802b26f13202edf71c2a1cd0eca99c",
-    "oolong_pairs": "7b552f0c47d2591f8523bd634dc00e999aa472f83fe70b24148a60e164683246",
-    "browsecomp_plus": "7fc18d5eef6e5ceff65a230b88d7384ddbc5aef5f82ee985b7af63810f2ec5f6",
-    "longbench_codeqa": "d44b8ae73ebd3b6d50dfe5219403a95a93f7212cd04c92b874877a6c417a1671",
+    "oolong": "c8c01cdb9989b30d2eb4245ccccc85fff1e896f7e4fe7d8395209b7f336a703a",
+    "oolong_pairs": "5e052234e095f8d8e9e3915e3b8dc992f92cf9cdc074a2ed432061e85d982041",
+    "browsecomp_plus": "e20ecc0c54b7013fbc77a1d27367dc6b44528e911411f021a71700f7bfcbd61f",
+    "longbench_codeqa": "3a75cdbfb9fe5a96c90e2e7587aa7dc8a231ff365d6ddbe321f027f7d0c45509",
 }
 
 sys.path[:0] = [str(ENVS / pkg) for pkg in PACKAGES.values()]

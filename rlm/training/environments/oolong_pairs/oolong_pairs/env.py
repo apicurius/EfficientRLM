@@ -20,20 +20,27 @@ from datasets import Dataset, load_dataset
 import rlm_train
 
 user_prologue = """OOLONG-Pairs environment notes:
-- The long TREC-coarse context is available in the REPL variable `context`; do
-  not print, paste, or echo raw context or large chunks into REPL output.
+- The OOLONG TREC-coarse context is available in the REPL variable `context`;
+  do not print, paste, or echo raw context or large chunks into REPL output.
+- Print only compact diagnostics: counts, short samples, candidate pairs, and
+  final evidence.
 - Each line looks roughly like `Date: <date> || User: <id> || Instance:
   <question>`; parse lines into user_id and question text in Python.
-- The per-question category labels are not explicit; infer them semantically.
-  Pair queries ask for unordered user-ID pairs satisfying joint
-  label/count/date predicates. Use Python for parsing, deduping, and pair
-  cross-products; use `llm_query_batched` over chunky windows for semantic
-  labeling, and aggregate compact results in Python.
+- For semantic long-context retrieval or aggregation, split the context into
+  chunky windows, use `llm_query_batched`, and aggregate compact results in
+  Python.
+- Labels/categories named in the question are annotations, not stored in the
+  context text — never keyword-match them; classify with `llm_query_batched`
+  (many lines per prompt, label-only outputs) and aggregate in Python.
+- Pair queries ask for unordered user-ID pairs satisfying joint
+  label/count/date predicates; use Python for deduping and pair cross-products
+  over the classified users.
 - Final answer: list every matching pair as `(id1, id2)`, lower ID first, one
   per line; if none match, answer `[]`.
 - When ready, set `answer["content"]` to ONLY that pair list (or `[]`) and then
   `answer["ready"] = True`.
 """
+
 _QUESTION_INSTRUCTION = (
     "Each question in the context falls into one of 6 categories: 'numeric "
     "value', 'entity', 'location', 'description and abstract concept', "

@@ -21,20 +21,22 @@ import rlm_train
 LONGBENCH_CODE_DOMAIN = "Code Repository Understanding"
 
 user_prologue = """LongBench-v2 Code-Repository-QA environment notes:
-- The REPL variable `context` holds a long source-code repository (potentially
-  many files concatenated); do not print, paste, or echo raw source or large
-  chunks into REPL output.
+- The long source-code repository (potentially many files concatenated) is
+  available in the REPL variable `context`; do not print, paste, or echo raw
+  source or large chunks into REPL output.
+- Print only compact diagnostics: matched files/symbols, counts, short
+  snippets, and final evidence.
 - This is a 4-choice multiple-choice question; read the question and the four
   options (A, B, C, D) in the prompt.
 - Search/grep the repo in Python for the relevant symbols and files, then use
-  chunky `llm_query_batched` calls over the candidate regions; aggregate compact
-  results in Python.
+  chunky `llm_query_batched` calls over the candidate regions; aggregate
+  compact results in Python.
 - Decide which single option is correct based on the code evidence.
-- Final answer: output ONLY the single letter of the correct choice: A, B, C,
-  or D.
+- Final answer: ONLY the single letter of the correct choice: A, B, C, or D.
 - When ready, set `answer["content"]` to that single letter and then
   `answer["ready"] = True`.
 """
+
 _QUESTION_INSTRUCTION = (
     "Answer the following multiple-choice question about the code repository in `context`. "
     "Respond with ONLY the letter (A, B, C, or D)."
