@@ -52,7 +52,7 @@ T, C = load("t2T"), load("t2C")
 cmax = max(C) if C else 0
 print("treatment steps:", len(T), "| control through step", cmax)
 
-ENVS = [("oolong-spam-train", "OOLONG"), ("browsecomp-plus-train", "BC-Plus")]
+ENVS = [("oolong-spam-train", "OOLONG"), ("browsecomp-plus-train", "BrowseComp+")]
 TCOL = {"oolong-spam-train": "#4878a8", "browsecomp-plus-train": "#c0504d"}
 CCOL = {"oolong-spam-train": "#9bb3c9", "browsecomp-plus-train": "#d9a5a3"}
 

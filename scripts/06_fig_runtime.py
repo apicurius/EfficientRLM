@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 OUT = "/scratch/omeerdogan23/erlm/thesis_msc/Figures/runtime_offline.pdf"
 
-suites = ["CodeQA", "BC-Plus", "OOLONG", "OOLONG-Pairs"]
+suites = ["CodeQA", "BrowseComp+", "OOLONG", "OOLONG-Pairs"]
 base   = [261, 845, 1244, 650]
 treat  = [534, 582, 880, 312]
 
