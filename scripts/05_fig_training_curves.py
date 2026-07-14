@@ -49,7 +49,9 @@ def full(xs, *series_list):
     return [s[k:] for s in ([xs] + list(series_list))]
 
 T, C = load("t2T"), load("t2C")
-cmax = max(C) if C else 0
+# dispatcher heartbeats share the step axis; only rows with training reward
+# keys are real trainer steps
+cmax = max((s for s in C if any(k.startswith("reward/") for k in C[s])), default=0)
 print("treatment steps:", len(T), "| control through step", cmax)
 
 ENVS = [("oolong-spam-train", "OOLONG"), ("browsecomp-plus-train", "BrowseComp+")]
@@ -61,8 +63,8 @@ plt.rcParams.update({
     "xtick.labelsize": 8, "ytick.labelsize": 8, "legend.fontsize": 7,
     "axes.spines.top": False, "axes.spines.right": False,
 })
-fig, axes = plt.subplots(2, 2, figsize=(6.1, 4.25))
-(ax1, ax2), (ax3, ax4) = axes
+fig, axes = plt.subplots(3, 2, figsize=(6.1, 6.3))
+(ax1, ax2), (ax3, ax4), (ax5, ax6) = axes
 
 for env, lab in ENVS:
     x, y = series(T, f"reward/{env}/mean")
@@ -98,7 +100,6 @@ ax3.plot(x, roll(y), color="#555555", lw=1.2, label="treatment")
 x, y = series(C, "is_truncated/all/mean")
 ax3.plot(x, roll(y), color="#aaaaaa", lw=1.2, ls="--", label="control")
 ax3.set_ylabel("seq.-truncation share"); ax3.set_title("(c)", loc="left")
-ax3.set_xlabel("training step")
 ax3.legend(frameon=False, loc="upper right", fontsize=7.5)
 ax3.set_ylim(0, 1)
 
@@ -109,10 +110,38 @@ ax4.axhline(0, color="#aaaaaa", lw=1.2, ls="--")
 ax4.annotate("control $\\equiv 0$", (0.98, 0.06), xycoords="axes fraction",
              ha="right", fontsize=7, color="#777777")
 ax4.set_ylabel("realized lever coeff. $\\beta$"); ax4.set_title("(d)", loc="left")
-ax4.set_xlabel("training step")
 ax4.set_ylim(-0.005, 0.16)
 
-fig.tight_layout(w_pad=1.6, h_pad=1.2, rect=(0, 0, 1, 0.955))
+# ---- (e,f) the unshaped evaluation record: mean turns per eval step ----
+# keep-LAST dedupe is done by 05a_pull_eval_series.py; step-0 is the shared
+# base-model initialization, drawn as a reference line.
+def eval_series(tag, env):
+    d = json.load(open(f"{ADV}/{tag}_eval_series.json"))["series"].get(env, {})
+    pts = sorted((int(float(k)), v["num_turns"]) for k, v in d.items()
+                 if v.get("num_turns") is not None)
+    return [p[0] for p in pts], [p[1] for p in pts]
+
+EVAL_ENVS = [("oolong-trec-coarse-eval", "oolong-spam-train", "OOLONG eval", ax5),
+             ("browsecomp-plus-eval", "browsecomp-plus-train", "BrowseComp+ eval", ax6)]
+for env, ckey, lab, ax in EVAL_ENVS:
+    xt, yt = eval_series("t2T", env)
+    xc, yc = eval_series("t2C", env)
+    # both arms evaluate the same base policy at step 0; the reference line is
+    # the mean of the two step-0 measurements (their spread is the twin noise)
+    inits = [y[0] for x, y in ((xt, yt), (xc, yc)) if x and x[0] == 0]
+    init = sum(inits) / len(inits) if inits else None
+    if init is not None:
+        ax.axhline(init, color="#bbbbbb", lw=1.0, ls=":")
+        ax.annotate("step-0 policy", (0.02, init), xycoords=("axes fraction", "data"),
+                    va="bottom", fontsize=6.5, color="#999999")
+    ax.plot(xt, yt, color=TCOL[ckey], lw=1.2, marker="o", ms=3, label="treatment")
+    ax.plot(xc, yc, color=CCOL[ckey], lw=1.2, ls="--", marker="s", ms=3, label="control")
+    ax.set_ylabel(f"{lab} turns"); ax.set_xlabel("training step")
+    ax.set_xlim(ax4.get_xlim())
+ax5.set_title("(e)", loc="left"); ax6.set_title("(f)", loc="left")
+ax5.legend(frameon=False, loc="lower left", fontsize=7.5)
+
+fig.tight_layout(w_pad=1.6, h_pad=1.2, rect=(0, 0, 1, 0.968))
 fig.savefig(OUT, bbox_inches="tight")
 print("wrote", OUT)
 
