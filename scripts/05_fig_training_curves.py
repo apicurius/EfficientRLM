@@ -141,6 +141,14 @@ for env, ckey, lab, ax in EVAL_ENVS:
 ax5.set_title("(e)", loc="left"); ax6.set_title("(f)", loc="left")
 ax5.legend(frameon=False, loc="lower left", fontsize=7.5)
 
+# reference step 120: the checkpoint whose transfer behavior the results
+# chapter examines
+for ax in (ax1, ax2, ax3, ax4, ax5, ax6):
+    ax.axvline(120, color="#999999", lw=0.7, ls=(0, (2, 3)), zorder=0)
+for ax in (ax1, ax2):
+    ax.annotate("120", (120, 1.02), xycoords=("data", "axes fraction"),
+                ha="center", fontsize=6.5, color="#888888")
+
 fig.tight_layout(w_pad=1.6, h_pad=1.2, rect=(0, 0, 1, 0.968))
 fig.savefig(OUT, bbox_inches="tight")
 print("wrote", OUT)
