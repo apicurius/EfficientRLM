@@ -1,4 +1,4 @@
-output_dir = "/scratch/omeerdogan23/erlm/.research/EfficientRLM/outputs/qwen3-30b-ab-treatment-multienv-200step"
+output_dir = "/scratch/omeerdogan23/erlm/.research/EfficientRLM/outputs/qwen3-30b-t2-treatment"
 max_steps = 200
 seq_len = 8192
 
@@ -7,7 +7,7 @@ name = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
 [wandb]
 project = "rlm-qwen3-30b"
-name = "qwen3-30b-ab-treatment-multienv-200step"
+name = "qwen3-30b-t2-treatment"
 
 [deployment]
 gpus_per_node = 8
