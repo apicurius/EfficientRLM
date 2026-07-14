@@ -56,7 +56,8 @@ def bypol_stats(rows):
                 se_cl=round(se(qmeans), 4), subs=round(mean([r["subs"] for r in rows]), 2),
                 zero=round(mean([1.0 if r["subs"] == 0 else 0.0 for r in rows]), 3),
                 cap=round(mean([r["cap"] for r in rows]), 3),
-                fin=round(mean([r["fin"] for r in rows]), 3))
+                fin=round(mean([r["fin"] for r in rows]), 3),
+                acc_fin=round(mean([r["acc"] for r in rows if r["fin"] > 0]), 4) if any(r["fin"] > 0 for r in rows) else None)
 
 def paired(a_rows, b_rows):
     A, B = defaultdict(list), defaultdict(list)
