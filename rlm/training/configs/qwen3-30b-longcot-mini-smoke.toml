@@ -1,0 +1,139 @@
+# longcot_mini wiring smoke: 20 steps, single-env train mix, neutral lever
+# (beta_max = 0.0, control-style). Train = domain-interleaved rows 0..399 of the
+# official easy split; eval = rows 400..424 (disjoint carve, same seed — the
+# interleave keeps both slices domain-balanced). New output_dir/wandb name on
+# purpose: the t2 A/B configs and their outputs stay untouched.
+output_dir = "/scratch/omeerdogan23/erlm/.research/EfficientRLM/outputs/qwen3-30b-longcot-mini-smoke"
+max_steps = 20
+seq_len = 8192
+
+[model]
+name = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+
+[wandb]
+project = "rlm-qwen3-30b"
+name = "qwen3-30b-longcot-mini-smoke"
+
+[deployment]
+gpus_per_node = 8
+num_train_gpus = 4
+num_infer_gpus = 4
+
+[trainer]
+
+[trainer.model]
+fused_lm_head_token_chunk_size = "auto"
+optimization_dtype = "bfloat16"
+reduce_dtype = "bfloat16"
+
+[trainer.model.ac]
+mode = "full"
+freq = 1
+
+[trainer.model.lora]
+rank = 32
+alpha = 64
+dropout = 0.0
+target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+
+[trainer.ckpt]
+interval = 5
+keep_interval = 5
+
+[trainer.ckpt.weights]
+save_adapter_separately = true
+
+[trainer.optim]
+lr = 5e-5
+
+[inference]
+gpu_memory_utilization = 0.80
+
+[inference.model]
+max_model_len = 16384
+enforce_eager = false
+
+[inference.parallel]
+tp = 1
+dp = 4
+
+[orchestrator]
+batch_size = 32
+group_size = 4
+
+[orchestrator.model.lora]
+name = "qwen3-30b-longcot-mini-smoke-lora"
+
+[[orchestrator.pre_batch_filters]]
+type = "zero_advantage"
+enforce = true
+
+[[orchestrator.post_batch_filters]]
+type = "repetition"
+enforce = true
+window = 3000
+prob_threshold = 0.99
+
+[[orchestrator.post_batch_filters]]
+type = "zero_advantage"
+enforce = true
+
+[orchestrator.ckpt]
+interval = 5
+keep_interval = 5
+
+[orchestrator.train.sampling]
+max_completion_tokens = 4096
+extra_body = { enable_thinking = false }
+
+[[orchestrator.train.env]]
+id = "longcot_mini"
+name = "longcot-mini-train"
+ratio = 1.0
+
+[orchestrator.train.env.advantage]
+type = "custom"
+import_path = "rlm_train.adaptive_group.adaptive_group_advantage"
+
+[orchestrator.train.env.advantage.kwargs]
+base = "correctness"
+beta_max = 0.0
+solve_floor = 0.25
+gamma = 1.0
+min_span = 1.0
+
+[orchestrator.train.env.args]
+difficulty = "easy"
+num_examples = 400
+start_index = 0
+seed = 42
+max_iterations = 20
+sub_max_tokens = 4096
+min_iterations = 2
+min_subcall = 0
+
+[orchestrator.eval]
+interval = 20
+skip_first_step = false
+num_examples = 25
+group_size = 1
+
+[orchestrator.eval.sampling]
+max_completion_tokens = 4096
+extra_body = { enable_thinking = false }
+
+[[orchestrator.eval.env]]
+id = "longcot_mini"
+name = "longcot-mini-eval"
+num_examples = 25
+group_size = 1
+
+[orchestrator.eval.env.args]
+difficulty = "easy"
+num_examples = 25
+start_index = 400
+seed = 42
+max_iterations = 20
+sub_max_tokens = 4096
+min_iterations = 2
+min_subcall = 0

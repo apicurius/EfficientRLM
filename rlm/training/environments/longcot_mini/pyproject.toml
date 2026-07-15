@@ -1,0 +1,30 @@
+[project]
+name = "longcot_mini"
+version = "0.1.0"
+description = "LongCoT-Mini long-horizon reasoning (official easy split) via RLMTrainEnv, scored by the pinned official longcot verifiers."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "rlm-train",
+    "verifiers>=0.1.11.dev0",
+    "datasets>=4.0",
+    "longcot @ git+https://github.com/LongHorizonReasoning/longcot.git@fb9649423f15f5b0091f8e988b100596cac592ca",
+]
+
+[tool.uv.sources]
+rlm-train = { path = "../..", editable = true }
+
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+# The official longcot dep is pinned by direct git URL (it is not on PyPI);
+# hatchling requires this opt-in for direct references.
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["longcot_mini"]
+
+[project.entry-points."verifiers.environments"]
+longcot_mini = "longcot_mini:load_environment"
