@@ -156,6 +156,22 @@ zero-share at base level) stays the decisive probe. Replay limits, stated:
 control-policy group composition, first-order proxy, no RL dynamics — the
 pilot still gates.
 
+## Hardware decision (user-agreed 2026-07-15)
+
+- Phase-4 pilot (20-step smoke + codeqa zero-share probe): **ai16**,
+  unconditionally — free held GPUs, all instruments local, speed immaterial
+  at 20 steps.
+- Full 200-step mitigated pair: **defaults to ai16** (both arms on the same
+  hardware — a self-contained pair, cleaner than t2's mixed history), at
+  ~7-11 days wall time; the studio remains the option if the calendar
+  demands ~1-2 days. Prerequisites for an ai16 run: (a) port the dispatcher
+  deadline sweep into the kuvalar runtime (the stuck-rollout defense
+  provably absent there; documented gap), (b) re-scope P-1 from
+  amplitude-vs-t2 (hardware-confounded: machine changes shift train-reward
+  levels +0.12-0.17, measured) to within-run oscillation structure.
+- Offline evaluation of the resulting adapters stays on the studio-class
+  rig regardless, for canon comparability.
+
 ## Rating context
 
 Scores and criteria behind this plan: session table of 2026-07-15
