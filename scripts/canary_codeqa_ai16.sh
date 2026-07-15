@@ -16,6 +16,7 @@ set -a; source /scratch/omeerdogan23/erlm/rlm/.env; set +a
 # Run a second concurrent canary with: GPUS=4,5,6,7 PORT=8001 canary_codeqa_ai16.sh <step>
 GPUS=${GPUS:-0,1,2,3}
 PORT=${PORT:-8000}
+POL="t2C_step$STEP"; [ "$STEP" = "base" ] && POL="Qwen/Qwen3-30B-A3B-Instruct-2507"
 
 # 1) stage adapter (login node has internet)
 if [ "$STEP" = "base" ]; then ADIR=""; fi
@@ -43,7 +44,6 @@ GPUS=$GPUS PORT=$PORT TP=4 GPU_MEM_UTIL=0.92 bash 00_serve.sh > /tmp/canary_serv
 SRV=\$!
 for i in \$(seq 1 90); do curl -s localhost:$PORT/health >/dev/null && break; sleep 10; done
 curl -s localhost:$PORT/health >/dev/null || { echo SERVE_FAILED; tail -5 /tmp/canary_serve_${STEP}_$PORT.log; kill \$SRV; exit 2; }
-POL="t2C_step$STEP"; [ "$STEP" = "base" ] && POL="Qwen/Qwen3-30B-A3B-Instruct-2507"
 BASE_URL="http://localhost:$PORT/v1" POLICIES_OVERRIDE="$POL" SUITE_FILTER=codeqa N_BC=0 \
   OUT=$EFF/outputs/canary_t2C bash 01_run_evals.sh
 kill \$SRV 2>/dev/null || true
