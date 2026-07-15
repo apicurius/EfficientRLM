@@ -1,10 +1,25 @@
 #!/usr/bin/env python
-"""Collect vf-eval result JSONLs -> policy x family table (+ ops columns)."""
-import json, glob, os, statistics as st
+"""Collect vf-eval result JSONLs -> policy x family table (+ ops columns).
+
+Usage: python 02_summarize.py [output_dir]
+Default (no arg) picks the ALPHABETICALLY last outputs/offline_eval_* dir --
+not the most recent. outputs/ can contain mixed naming (offline_eval_full_*,
+offline_eval_dry_*, plain offline_eval_YYYYMMDD), and alphabetical order does
+not match chronological order across those (e.g. 'offline_eval_full_20260712'
+sorts after 'offline_eval_20260713'). Pass the dir explicitly -- especially
+after backfilling one new suite into an existing run's OUT -- rather than
+trusting the default to pick the dir you just wrote.
+"""
+import sys, json, glob, os, statistics as st
 here = os.path.dirname(os.path.abspath(__file__))
-outs = sorted(glob.glob(os.path.join(here, '..', '..', 'outputs', 'offline_eval_*')))
-assert outs, 'no offline_eval_* outputs found'
-OUT = outs[-1]
+if len(sys.argv) > 1:
+    OUT = os.path.abspath(sys.argv[1])
+    assert os.path.isdir(OUT), f'not a directory: {OUT}'
+else:
+    outs = sorted(glob.glob(os.path.join(here, '..', '..', 'outputs', 'offline_eval_*')))
+    assert outs, 'no offline_eval_* outputs found'
+    OUT = outs[-1]
+print(f'summarizing: {OUT}')
 rows = {}
 for f in glob.glob(f'{OUT}/*/*/**/*.jsonl', recursive=True):
     rel = os.path.relpath(f, OUT).split(os.sep)
