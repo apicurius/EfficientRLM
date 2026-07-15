@@ -34,7 +34,7 @@ LONGCOT_START=${LONGCOT_START:-0}
 # by default -- 400 extra examples/policy dwarfed the paper suite's cost. Re-enable
 # explicitly: N_TREC_EXT=200 N_SPAM=200 bash 01_run_evals.sh (or via 01_run_evals_8gpu.sh).
 N_TREC_EXT=${N_TREC_EXT:-0}; N_SPAM=${N_SPAM:-0}
-# LongBench-v2 domain extensions (post-hoc, 2026-07-13): same env/verifier as
+# LongBench-v2 domain extensions: same env/verifier as
 # codeqa, different domain filter. Probes whether the t2T_final codeqa collapse
 # is code-specific or generic OOD-MCQ (see forensics in session notes). OFF by
 # default; full domains are n=175 (Single-Doc) / n=125 (Multi-Doc).

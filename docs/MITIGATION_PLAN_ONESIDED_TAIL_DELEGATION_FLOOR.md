@@ -71,7 +71,7 @@ remains a pure function of the group (the ch03 property is preserved).
    to `_COST_BASES` — the existing default plus the λ surcharge at
    subcalls = 0. Registry semantics unchanged (unknown names still raise);
    `DEFAULT_COST_BASIS` untouched — arms opt in via config. This mirrors how
-   the four existing bases are registered; the thesis's cost-bases table
+   the four existing bases are registered; the reported cost-bases table
    (tbl:cost-bases) gains one row at population time.
 2. **One-sided shaping** (mitigation 1): a new keyword on the advantage
    entry point (pattern-matching `min_span`), e.g. `tail_only: float | None`
@@ -115,9 +115,9 @@ remains a pure function of the group (the ch03 property is preserved).
   β_max=0.15 vs 0 — the mitigation is part of the recipe, the lever remains
   the only difference. The t2 pair is never re-run or amended; its results
   stand as the dose-feedback and collapse evidence that motivated this plan.
-- Thesis touchpoint (only after data): Future Work already registers the
+- Reporting touchpoint (only after data): the future-work registry already includes the
   delegation floor; the one-sided variant extends the same paragraph. No
-  thesis edit before results exist, per the errata discipline.
+  reporting edit before results exist, per the errata discipline.
 
 ## AMENDMENT 2026-07-15 — adversarial replay verdict (evidence, no training)
 

@@ -79,7 +79,7 @@ if [ "${LONGCOT_ONLY:-0}" = "1" ]; then
   # range (paired A/B analysis needs identical question sets). A previous
   # version advanced `start` globally across all policies' shards, giving each
   # policy a disjoint 1/N_POLICIES slice — zero question overlap across
-  # policies (caught 2026-07-13).
+  # policies.
   base=$((LONGCOT_TOTAL / N_REPLICAS))
   rem=$((LONGCOT_TOTAL % N_REPLICAS))
   shard=0

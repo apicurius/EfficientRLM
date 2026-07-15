@@ -47,7 +47,7 @@ def _fatal(trace: Any) -> bool:
     return any(x in err for x in _DEAD_WORKER) or not _has_final(trace) or _stop(trace) in _FATAL_STOPS
 
 
-# Scaffold-action cost bases. The thesis cost target is scaffold *usage* — root
+# Scaffold-action cost bases. The cost target is scaffold *usage* — root
 # turns plus helper calls — NOT tokens (tokens are telemetry only). Each basis is a
 # different definition of "scaffold spend" over the metrics the RLM env already emits
 # (rlm_iterations, rlm_repl_calls, rlm_sub_llm_calls), so the cost-reduction result can

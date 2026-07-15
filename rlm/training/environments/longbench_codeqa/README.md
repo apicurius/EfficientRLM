@@ -15,4 +15,4 @@ finalizes by setting `answer["content"]` to a single letter and
 
 Opt-in efficiency shaping kwargs (`shaping_coef` / budgets / weights) behave as
 in the other eval-suite envs; default is the stock correctness-only rubric. See
-repo-root `THESIS.md`.
+the repository README.
