@@ -33,13 +33,13 @@ PY
 fi
 
 # 2) serve + eval on ai16 via the holder job (never cancel job 1263387)
-CANARY_OUT=${CANARY_OUT:-} srun --overlap --export=ALL --jobid=1263387 --gres=gpu:rtx_a6000:4 -n1 --cpus-per-task=24 --mem=0 bash -l <<INNER
+CANARY_OUT=${CANARY_OUT:-} srun --overlap --export=ALL --jobid=1263387 --gres=gpu:rtx_a6000:8 -n1 --cpus-per-task=24 --mem=0 bash -l <<INNER
 set -euo pipefail
 module load cuda/12.8.0 >/dev/null 2>&1 || true
 export PATH=$PRL/.venv/bin:\$PATH
 export HF_HOME=/scratch/omeerdogan23/hf_cache HF_HUB_OFFLINE=1 HF_HUB_DISABLE_XET=1
 export NCCL_P2P_DISABLE=1 NCCL_IB_DISABLE=1
-export PYTHONPATH=$EFF/rlm:$EFF/rlm/training/src:$EFF/rlm/training/environments/browsecomp_plus:$EFF/rlm/training/environments/oolong:$EFF/rlm/training/environments/oolong_pairs:$EFF/rlm/training/environments/longbench_codeqa:$EFF/rlm/training/environments/longcot_mini
+export PYTHONPATH=$EFF/scripts/offline_eval/pyshim:$EFF/rlm:$EFF/rlm/training/src:$EFF/rlm/training/environments/browsecomp_plus:$EFF/rlm/training/environments/oolong:$EFF/rlm/training/environments/oolong_pairs:$EFF/rlm/training/environments/longbench_codeqa:$EFF/rlm/training/environments/longcot_mini
 cd $EFF/scripts/offline_eval
 GPUS=$GPUS PORT=$PORT TP=4 GPU_MEM_UTIL=0.92 bash 00_serve.sh > /tmp/canary_serve_${STEP}_$PORT.log 2>&1 &
 SRV=\$!
