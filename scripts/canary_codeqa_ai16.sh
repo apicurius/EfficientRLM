@@ -12,6 +12,10 @@ EFF=/scratch/omeerdogan23/erlm/.research/EfficientRLM
 PRL=/scratch/omeerdogan23/erlm/prime-rl
 ADIR=$EFF/scripts/offline_eval/adapters/t2C_step$STEP
 set -a; source /scratch/omeerdogan23/erlm/rlm/.env; set +a
+# Dual-replica knobs: default replica A = GPUs 0-3 / port 8000.
+# Run a second concurrent canary with: GPUS=4,5,6,7 PORT=8001 canary_codeqa_ai16.sh <step>
+GPUS=${GPUS:-0,1,2,3}
+PORT=${PORT:-8000}
 
 # 1) stage adapter (login node has internet)
 if [ "$STEP" = "base" ]; then ADIR=""; fi
@@ -35,12 +39,12 @@ export PATH=$PRL/.venv/bin:\$PATH
 export HF_HOME=/scratch/omeerdogan23/hf_cache HF_HUB_OFFLINE=1 HF_HUB_DISABLE_XET=1
 export NCCL_P2P_DISABLE=1 NCCL_IB_DISABLE=1
 cd $EFF/scripts/offline_eval
-GPUS=0,1,2,3 TP=4 GPU_MEM_UTIL=0.92 bash 00_serve.sh > /tmp/canary_serve_$STEP.log 2>&1 &
+GPUS=$GPUS PORT=$PORT TP=4 GPU_MEM_UTIL=0.92 bash 00_serve.sh > /tmp/canary_serve_${STEP}_$PORT.log 2>&1 &
 SRV=\$!
-for i in \$(seq 1 90); do curl -s localhost:8000/health >/dev/null && break; sleep 10; done
-curl -s localhost:8000/health >/dev/null || { echo SERVE_FAILED; tail -5 /tmp/canary_serve_$STEP.log; kill \$SRV; exit 2; }
+for i in \$(seq 1 90); do curl -s localhost:$PORT/health >/dev/null && break; sleep 10; done
+curl -s localhost:$PORT/health >/dev/null || { echo SERVE_FAILED; tail -5 /tmp/canary_serve_${STEP}_$PORT.log; kill \$SRV; exit 2; }
 POL="t2C_step$STEP"; [ "$STEP" = "base" ] && POL="Qwen/Qwen3-30B-A3B-Instruct-2507"
-POLICIES_OVERRIDE="$POL" SUITE_FILTER=codeqa N_BC=0 \
+BASE_URL="http://localhost:$PORT/v1" POLICIES_OVERRIDE="$POL" SUITE_FILTER=codeqa N_BC=0 \
   OUT=$EFF/outputs/canary_t2C bash 01_run_evals.sh
 kill \$SRV 2>/dev/null || true
 INNER

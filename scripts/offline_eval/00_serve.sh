@@ -32,6 +32,7 @@ LORAS=""
 [ -d "$A/t2T_120" ]   && LORAS="$LORAS t2T_120=$A/t2T_120"
 [ -d "$A/t2C" ]       && LORAS="$LORAS t2C=$A/t2C"
 [ -d "$A/authors" ]   && LORAS="$LORAS authors=$A/authors"
+for d in "$A"/t2C_step*; do [ -d "$d" ] && LORAS="$LORAS $(basename "$d")=$d"; done
 exec $VLLM serve Qwen/Qwen3-30B-A3B-Instruct-2507 \
   --tensor-parallel-size ${TP:-1} --max-model-len ${MAX_MODEL_LEN:-16384} \
   --gpu-memory-utilization ${GPU_MEM_UTIL:-0.97} \
