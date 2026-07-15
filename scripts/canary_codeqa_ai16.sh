@@ -33,7 +33,7 @@ PY
 fi
 
 # 2) serve + eval on ai16 via the holder job (never cancel job 1263387)
-srun --overlap --jobid=1263387 --gres=gpu:rtx_a6000:4 -n1 --cpus-per-task=24 --mem=0 bash -l <<INNER
+CANARY_OUT=${CANARY_OUT:-} srun --overlap --export=ALL --jobid=1263387 --gres=gpu:rtx_a6000:4 -n1 --cpus-per-task=24 --mem=0 bash -l <<INNER
 set -euo pipefail
 module load cuda/12.8.0 >/dev/null 2>&1 || true
 export PATH=$PRL/.venv/bin:\$PATH
@@ -46,14 +46,14 @@ SRV=\$!
 for i in \$(seq 1 90); do curl -s localhost:$PORT/health >/dev/null && break; sleep 10; done
 curl -s localhost:$PORT/health >/dev/null || { echo SERVE_FAILED; tail -5 /tmp/canary_serve_${STEP}_$PORT.log; kill \$SRV; exit 2; }
 BASE_URL="http://localhost:$PORT/v1" POLICIES_OVERRIDE="$POL" SUITE_FILTER=codeqa N_BC=0 \
-  OUT=$EFF/outputs/canary_t2C bash 01_run_evals.sh
+  OUT=${CANARY_OUT:-$EFF/outputs/canary_t2C} bash 01_run_evals.sh
 kill \$SRV 2>/dev/null || true
 INNER
 
 # 3) summarize into the canary log
 $PRL/.venv/bin/python - <<PY
 import glob, json, os
-root = "$EFF/outputs/canary_t2C"
+root = os.environ.get("CANARY_OUT", "$EFF/outputs/canary_t2C")
 pol = "t2C_step$STEP" if "$STEP" != "base" else "Qwen*"
 fs = sorted(glob.glob(f"{root}/codeqa/*/**/results.jsonl", recursive=True), key=os.path.getmtime)
 fs = [f for f in fs if ("t2C_step$STEP" in f) or ("$STEP" == "base" and "Qwen" in f)]
