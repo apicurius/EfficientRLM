@@ -22,6 +22,7 @@ _PATHS = [TRAINING / "src"] + [
         "oolong_pairs",
         "browsecomp_plus",
         "longbench_codeqa",
+        "longcot_mini",
     )
 ]
 for p in _PATHS:

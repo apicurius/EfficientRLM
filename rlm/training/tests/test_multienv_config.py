@@ -3,11 +3,17 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+import pytest
+
 CFG = (
     Path(__file__).resolve().parents[1]
     / "configs"
     / "smoke-qwen3-30b-correctness-multienv-oolong-browsecomp-gpt5nano.toml"
 )
+
+# The pinned smoke config lives only in the cluster checkout (/scratch), not in
+# every working tree; skip rather than FileNotFoundError where it is absent.
+pytestmark = pytest.mark.skipif(not CFG.exists(), reason=f"{CFG.name} not in this checkout")
 
 
 def _cfg() -> dict:

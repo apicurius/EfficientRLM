@@ -32,8 +32,8 @@ dropout = 0.0
 target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
 
 [trainer.ckpt]
-interval = 20
-keep_interval = 20
+interval = 5
+keep_interval = 5
 
 [trainer.ckpt.weights]
 save_adapter_separately = true
@@ -42,15 +42,15 @@ save_adapter_separately = true
 lr = 5e-5
 
 [inference]
-gpu_memory_utilization = 0.90
+gpu_memory_utilization = 0.80
 
 [inference.model]
 max_model_len = 16384
-enforce_eager = true
+enforce_eager = false
 
 [inference.parallel]
-tp = 4
-dp = 1
+tp = 1
+dp = 4
 
 [orchestrator]
 batch_size = 32
@@ -74,8 +74,8 @@ type = "zero_advantage"
 enforce = true
 
 [orchestrator.ckpt]
-interval = 20
-keep_interval = 20
+interval = 5
+keep_interval = 5
 
 [orchestrator.train.sampling]
 max_completion_tokens = 4096

@@ -29,6 +29,7 @@ PACKAGES = {
     "oolong_pairs": "oolong_pairs",
     "browsecomp_plus": "browsecomp_plus",
     "longbench_codeqa": "longbench_codeqa",
+    "longcot_mini": "longcot_mini",
 }
 
 # Full-text pins. A prologue edit MUST update the hash here in the same commit.
@@ -37,6 +38,7 @@ PROLOGUE_SHA256 = {
     "oolong_pairs": "5e052234e095f8d8e9e3915e3b8dc992f92cf9cdc074a2ed432061e85d982041",
     "browsecomp_plus": "e20ecc0c54b7013fbc77a1d27367dc6b44528e911411f021a71700f7bfcbd61f",
     "longbench_codeqa": "3a75cdbfb9fe5a96c90e2e7587aa7dc8a231ff365d6ddbe321f027f7d0c45509",
+    "longcot_mini": "2f8eebd47ae415dfb66982b88c029d462f2df793fca436515b611d8004709f9a",
 }
 
 sys.path[:0] = [str(ENVS / pkg) for pkg in PACKAGES.values()]
@@ -51,6 +53,26 @@ from oolong.env import user_prologue as oolong_user_prologue  # noqa: E402
 from oolong_pairs.env import load_environment as load_pairs  # noqa: E402
 from oolong_pairs.env import user_prologue as pairs_user_prologue  # noqa: E402
 
+# longcot_mini is the only package whose module-level import needs a
+# non-PyPI git dependency (`longcot`, see its pyproject.toml) that is not in
+# training/uv.lock -- unlike the other four, it can be ABSENT from a locked
+# rlm/training venv even though the package directory/files all exist. Import
+# it defensively so that case is a loud FAILING check, not a crash that kills
+# every other package's validation too.
+try:
+    from longcot_mini.env import load_environment as load_longcot_mini  # noqa: E402
+    from longcot_mini.env import user_prologue as longcot_mini_user_prologue  # noqa: E402
+
+    LONGCOT_MINI_IMPORTABLE = True
+    LONGCOT_MINI_IMPORT_ERROR = ""
+except ImportError as exc:
+    load_longcot_mini = None
+    longcot_mini_user_prologue = None
+    LONGCOT_MINI_IMPORTABLE = False
+    # `as exc` is deleted at the end of this block (exception-reference-cycle
+    # avoidance) -- stash the message as a plain str for use later in main().
+    LONGCOT_MINI_IMPORT_ERROR = str(exc)
+
 PROLOGUES = {
     "oolong": oolong_user_prologue,
     "oolong_pairs": pairs_user_prologue,
@@ -63,6 +85,9 @@ LOADERS = {
     "browsecomp_plus": load_bcp,
     "longbench_codeqa": load_lbv2,
 }
+if LONGCOT_MINI_IMPORTABLE:
+    PROLOGUES["longcot_mini"] = longcot_mini_user_prologue
+    LOADERS["longcot_mini"] = load_longcot_mini
 
 
 def _structure_checks() -> dict[str, bool]:
@@ -99,6 +124,7 @@ def _config_env_ids() -> set[str]:
 
 def main() -> int:
     checks = _structure_checks()
+    checks["longcot_mini_importable"] = LONGCOT_MINI_IMPORTABLE
 
     # Full-text prologue pins + clean-pattern diagnostics.
     for name, text in PROLOGUES.items():
@@ -119,12 +145,24 @@ def main() -> int:
     checks["lbv2_letter_format_in_question_instruction"] = (
         "A, B, C, or D" in getattr(_lbv2_env, "_QUESTION_INSTRUCTION", "")
     )
+    if LONGCOT_MINI_IMPORTABLE:
+        checks["longcot_mini_mentions_solution_format"] = (
+            "solution = " in longcot_mini_user_prologue
+        )
+        checks["longcot_mini_lifts_no_tools_rule"] = (
+            "does NOT apply" in longcot_mini_user_prologue
+        )
 
     # Signatures: config keys must land as kwargs, not vanish.
     oolong_params = inspect.signature(load_oolong).parameters
     checks["oolong_signature_has_min_ctx"] = "min_ctx" in oolong_params
     checks["oolong_signature_has_max_ctx"] = "max_ctx" in oolong_params
     checks["oolong_signature_has_exclude_numeric"] = "exclude_numeric" in oolong_params
+    if LONGCOT_MINI_IMPORTABLE:
+        lcm_params = inspect.signature(load_longcot_mini).parameters
+        checks["longcot_mini_signature_has_difficulty"] = "difficulty" in lcm_params
+        checks["longcot_mini_signature_has_start_index"] = "start_index" in lcm_params
+        checks["longcot_mini_signature_has_enable_fallback"] = "enable_fallback" in lcm_params
     for name, loader in LOADERS.items():
         checks[f"{name}_signature_has_user_prologue"] = (
             "user_prologue" in inspect.signature(loader).parameters
@@ -139,6 +177,12 @@ def main() -> int:
     if not all(checks.values()):
         if unknown:
             print(f"FAILED (config env ids with no validated package: {sorted(unknown)})")
+        elif not LONGCOT_MINI_IMPORTABLE:
+            print(f"FAILED (longcot_mini not importable: {LONGCOT_MINI_IMPORT_ERROR})")
+            print(
+                "  fix: uv pip install 'longcot @ git+https://github.com/LongHorizonReasoning/"
+                "longcot.git@fb9649423f15f5b0091f8e988b100596cac592ca'"
+            )
         else:
             print("FAILED")
         return 1
