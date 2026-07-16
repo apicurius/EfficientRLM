@@ -125,3 +125,69 @@ exposure cap retained as an optional safety knob without evidentiary
 claims; P-1..P-4 as re-scoped above; in-run transfer canary mandatory.
 Freeze becomes a PREREG document upon sign-off; implementation remains
 gated on Gate 1 completing.
+
+## ADDENDUM 2026-07-16 — adversarial review verdict: REJECT (design freeze withdrawn)
+
+An independent adversarial review (Codex, full evidence bundle: plan,
+memo, canary rows, replay instrument, operator source) returned REJECT on
+registering V4 (iterations + tail_only 0.5) as the next-launch default.
+Twelve objections, most-severe first; #1 verified against the operator
+source by direct read:
+
+1. CRITICAL, VERIFIED: tail-only is not one-sided after mean-centering.
+   The operator computes shaped = 1 − β·q then subtracts the group mean;
+   a non-tail valid rollout gains A = A(β=0) + β·Σq/4 whenever any
+   sibling is penalized. Cheapness IS paid post-centering; zero-delegation
+   rollouts share the gain; invalid rollouts' penalty is diluted by the
+   same amount. Explains V1's replay failure. The plan's "cheapness earns
+   nothing" claim (lines 45–47) is false for the implemented operator.
+2. CRITICAL: attribution declared resolved before the pre-registered
+   comparison exists (control@200 + offline 2×2 pending; canary stability
+   only through 160; fence contrast is c160-vs-t200, not matched-step).
+   Gate 3's RESOLVED status in this memo is withdrawn to PROVISIONAL.
+3. CRITICAL: replay dataset covers control steps 1–92 only — outside the
+   120–200 failure regime — and is a time-of-execution glob, not a frozen
+   registered dataset.
+4. HIGH: residual BCP gradient (−2.64) unquantified as benign; V3
+   dominates V4 on both reported environments; no uncertainty reported.
+5. HIGH: iterations-only relocates pressure onto multi-turn operation;
+   dA/d(iterations) never reported; suppression-of-turns is the same
+   failure class one level up.
+6. HIGH: turns/wall-time preservation is asserted, not evidenced — the
+   9.0-vs-12.8 exhibit was produced under the combined objective and
+   cannot identify what iterations-only preserves.
+7. HIGH: replay corner metrics cannot see the corner — lowsub_wins means
+   subs ≤ 1 with a UNIQUE top; tail-only creates tied tops that include
+   zero-sub rollouts and are excluded from the statistic.
+8. HIGH: "unchanged signal mass" is conditional on fired groups; V3/V4
+   fire MORE often, so cumulative shaping dose can rise while the
+   conditional mean stays flat.
+9. MED-HIGH: group-size-4 degeneracies — with exactly 2 valid rollouts
+   tail-only ≡ symmetric; min-max endpoints trivialize τ; single outliers
+   set the normalization.
+10. MED-HIGH: the 20-step pilot cannot detect a failure that develops
+    after step 120, and a 1-rep canary is underpowered (±9–11 pt) with no
+    stop rule registered.
+11. MED: replay validity gate is not bit-exact with the live operator
+    (missing max_turns + dead-worker fatal classes).
+12. MED: the plan document still registers/instructs the superseded
+    subs-priced+floor design in Phases 1–2; not implementation-grade.
+
+Reviewer's constructive hypothesis: a two-sided constrained/deadband
+objective — no reward for abstinence, a moderate delegation region left
+unpriced, a hinge cost only on sub-call volume above a pre-registered
+budget, plus an aggregate delegation-rate lower constraint — validated
+over the late-collapse horizon with pooled canaries and an explicit stop
+rule.
+
+CONSEQUENCE FOR THIS MEMO: the freeze recommendation is WITHDRAWN. Before
+any freeze: (a) Gate 1 completes (control@200 + sweep + offline 2×2);
+(b) replay re-run on a FROZEN dataset covering steps 120–200 of both
+arms, bit-exact validity, reporting dA/d(iterations) and dA/d(subs),
+exact zero-sub top-advantage incidence including ties, firing-weighted
+total dose, and dispersion; (c) candidate set widened to {V3, V4,
+deadband/hinge}; (d) pilot redesigned to cover the late-collapse horizon
+with pooled canaries and a registered stop rule; (e) plan document
+reconciled. The mitigation DIRECTION (stop pricing delegation volume;
+protect the transferable operation layer) is unchallenged by the review;
+the specific mechanism and its evidence base are what failed.
