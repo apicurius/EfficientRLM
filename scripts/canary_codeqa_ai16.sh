@@ -44,7 +44,7 @@ export PYTHONPATH=$EFF/scripts/offline_eval/pyshim:$EFF/rlm:$EFF/rlm/training/sr
 cd $EFF/scripts/offline_eval
 GPUS=$GPUS PORT=$PORT TP=4 GPU_MEM_UTIL=0.92 bash 00_serve.sh > /tmp/canary_serve_${STEP}_$PORT.log 2>&1 &
 SRV=\$!
-for i in \$(seq 1 90); do curl -s localhost:$PORT/health >/dev/null && break; sleep 10; done
+for i in \$(seq 1 180); do curl -s localhost:$PORT/health >/dev/null && break; sleep 10; done
 curl -s localhost:$PORT/health >/dev/null || { echo SERVE_FAILED; tail -5 /tmp/canary_serve_${STEP}_$PORT.log; kill \$SRV; exit 2; }
 BASE_URL="http://localhost:$PORT/v1" POLICIES_OVERRIDE="$POL" SUITE_FILTER=codeqa N_BC=0 \
   OUT=${CANARY_OUT:-$EFF/outputs/canary_t2C} bash 01_run_evals.sh
