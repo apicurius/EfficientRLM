@@ -191,3 +191,29 @@ with pooled canaries and a registered stop rule; (e) plan document
 reconciled. The mitigation DIRECTION (stop pricing delegation volume;
 protect the transferable operation layer) is unchallenged by the review;
 the specific mechanism and its evidence base are what failed.
+
+## ADDENDUM 2 (2026-07-16) — rollout forensics: the target is unnecessary sub-calls, not volume
+
+Bucketed analysis over ~750 pooled canary rollouts (per-policy × sub-call
+volume buckets: 0 / 1–5 / 6–30 / >30):
+- Base and all control checkpoints: zero-delegation rollouts are as
+  correct or more correct than 6–30-call rollouts (e.g. base 0.43 vs
+  0.33; c120 0.38 vs 0.25). Marginal calls above ~5 do not convert.
+- treatment@120's 1–5 bucket is the best cell measured (0.57 correct,
+  vs 0.42 for its zero bucket): few calls, converted — the productive
+  delegation band.
+- >30-call rollouts: 25–29% (base, c120) spend most calls on
+  near-identical invocation lines (duplicate-call share > 50%); they
+  finish without cap-out and without accuracy — redundancy, the RLM
+  paper's weak-model failure mode (calls issued, returns unused).
+
+Design consequences: (a) supports the deadband/hinge candidate — the
+moderate band must remain unpriced (it is where delegation value lives),
+excess volume above a registered budget is where marginal value is ~zero;
+(b) adds a candidate cost basis: UNIQUE (dedup-counted) sub-calls, pricing
+redundancy directly rather than volume — requires one new env telemetry
+channel (rlm/training scope), validatable offline from existing
+transcripts before any run; (c) reporting language: "beyond a small
+budget, sub-calls stop converting into correctness, and the tail is
+dominated by measurable redundancy" — task-tied delegation is explicitly
+honored.
