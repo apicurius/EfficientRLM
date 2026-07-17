@@ -288,3 +288,22 @@ sign-off. TRAINING-LENGTH POLICY (user question, answered): do not cut at
 120 (tests nothing about the fix); canary stop rule is the budget
 mechanism; checkpoint selection by canary-clean argmax; 160 = floor under a
 hard budget cap.
+
+### Addendum 4 supplement — final registered form (user-ratified)
+
+cost = I + 2 · ln(1 + max(0, S − B))   [log1p in code]
+
+- λ = 2, natural log: a reasoned constant, not a fit — bracketed by the
+  equal-voice evaluations of both regimes (1.86 early / 2.73 late), inside
+  the sweep-verified smooth range [0.93, 3.71], with the plain meaning
+  "two iterations per e-fold of excess volume" (~1.39 per doubling).
+  Frozen for the run; the span-matching rule runs in shadow; shadow outside
+  the tested range => stop, re-register, restart (never in-run adaptation —
+  an adaptive λ(t) is dataset- and policy-shaped, the rejected form).
+- B: registered as the productive-band rule (largest sub-call bucket with
+  positive marginal correctness gain on the frozen calibration set);
+  evaluates to 5 on every measured surface; choice among {3,5,8} shown
+  immaterial. No unexplained constants remain in the objective.
+- Base choice: natural log for consistency with the entire evidence chain
+  (operator basis, both replay reports, calibrations); base-2 equivalent
+  (κ=1.5/doubling) documented and rejected as a pure reparameterization.
