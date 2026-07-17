@@ -96,3 +96,39 @@ checkpoint (interval already 5 steps — max ~5 steps redone per wedge);
 => restart via tmux); (c) PRIME_RL_ROLLOUT_TIMEOUT_S exported but known
 unconsumed on this runtime (documented no-op). Wedge risk accepted as
 recovery-cost, not run-loss.
+
+## Amendment A1 (2026-07-17, pre-step-5, user-directed)
+
+The free-band threshold is REMOVED. Registered cost basis becomes:
+
+    cost = rlm_iterations + 2 * ln(1 + rlm_sub_llm_calls)      (B = 0)
+
+All other parameters unchanged: lam=2.0, zero_neutralize=true, beta_max=0.15,
+solve_floor=0.25, gamma=1.0, min_span=1.0. Config-only change (B is a kwarg);
+zero code modifications; the adaptive_group.py implementation is byte-identical
+to commit 43c9346.
+
+Rationale and evidence (frozen t2-control 120-200 window, ADVISOR.md #154-155):
+1. Advantage-space audit under zero-neutralization shows small delegators
+   (1<=S<=5) remain NET-FAVORED at B=0 (mean dA +0.0076, 27% pushed down, vs
+   +0.0119 / 20% at B=5): the abstention guard is zero-neutralization (exact),
+   not the threshold. The earlier raw-cost +2.56 flip does not survive
+   translation into advantage space.
+2. Threshold immateriality: {3,5,8} and structure-derived per-env budgets all
+   gate-equivalent; removing it simplifies the objective and preserves
+   cross-policy comparability (no budget concept foreign to the released
+   scaffold).
+3. lam=2 retained by the span-matching rule (window estimates 1.86-2.76);
+   lam=1 shown to reduce the basis to t2's original (rank-tracks iterations
+   0.88 vs sub-calls 0.41 -- the diagnosed imbalance); functional form (ln vs
+   ln^2 vs hybrid) proven immaterial after span matching (group min-max
+   normalization absorbs shape; S>100 tail gets strongest pressure, 72% down,
+   under every form).
+
+Run consequence: the B=5 attempt (launched 13:39, <=1 training step + step-0
+eval) is DISCARDED (outputs/qwen3-30b-t3-b5-discarded-20260717); training
+restarts from step 0. All gates G0-G3, stop rules S1-S6, and predictions
+P-1..P-4 apply unchanged to the restarted run. S1 zero-invariance audit is
+unaffected (zero-neutralization unchanged). The first-5-free spot-check in the
+advisor loop is superseded: rollouts with S=0 should show cost == iterations;
+any S>0 rollout shows cost == iterations + 2*ln(1+S).
