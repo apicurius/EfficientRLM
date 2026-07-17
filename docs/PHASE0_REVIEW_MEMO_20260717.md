@@ -217,3 +217,39 @@ transcripts before any run; (c) reporting language: "beyond a small
 budget, sub-calls stop converting into correctness, and the tail is
 dominated by measurable redundancy" — task-tied delegation is explicitly
 honored.
+
+## ADDENDUM 3 (2026-07-17) — design consult: zero-neutralized waste pricing
+
+Second adversarial consult (Codex, post-control evidence bundle: corrected
+validation pass, offline final table, compute-matched result, pairs
+sweep-style finding, redundancy forensics). Substance:
+
+1. NO scalar cost family survives mean-centering alone (ΔA_i = β(q̄−q_i)).
+   Registered fix: a ZERO-NEUTRALIZATION transform shared by all candidates
+   — zero-subcall valid rollouts receive the mean penalty of their
+   delegating siblings, making abstinence exactly advantage-neutral while
+   productive delegators still compete. (Raw hinges paid zero-callers in
+   82–84% of fired groups; corner|zero up to 0.96.)
+2. Pure unique-subs demoted: pricing distinct calls makes REPEATS free —
+   the wrong incentive for a near-duplicate-dominated tail. The telemetry
+   still matters: redundancy R = S−U becomes the priced quantity.
+3. Recommended family: per-turn log waste
+   C_PT = I + λ*·log(1+Σ_t[R_t+(U_t−b)+]), b=5 (edge of the measured
+   productive band), λ* span-calibrated on the frozen 1–99 set and held
+   fixed. Ranking: C_PT > C_RW (rollout-level waste) > C_LH (volume
+   log-hinge) > C_U > V3 > V4 > raw hinges. Turns stay priced; additive
+   joint costs only (ratios gameable via dummy turns).
+4. Self-declared failure mode: the productive sweep size is
+   domain-dependent — C_PT could mislabel legitimate breadth as waste on a
+   new family → per-environment ranking mandatory in the decision pass;
+   never-trained canaries mandatory in the pilot.
+5. Six additional decision-pass metrics required (multivariate FE slopes,
+   bucket redistribution with a zero-ΔA assertion, productive-vs-zero
+   contrast, span attribution by k_valid, dedup audit, cost-preservation
+   proxy vs V0).
+
+Practical sequencing: the 120–200 decision pass ranks the
+computable-from-dumps cells (V0/V3/V4 references + zero-neutralized C_LH
+with frozen λ) — the waste family (C_PT/C_RW) requires a new env telemetry
+channel (rlm/training scope) and enters via offline validation before the
+pilot. Instrument extension in progress; decision data still pending (tar).
