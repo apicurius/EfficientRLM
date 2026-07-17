@@ -87,3 +87,12 @@ C_PT (per-turn waste) is a separately calibrated challenger: requires the
 env dedup/per-turn telemetry channel, 100% coverage, R_t = S_t - U_t
 reconciliation, its own frozen lambda, and independent passage of G1-style
 gates. No automatic substitution.
+
+## ADDENDUM (2026-07-17, pre-launch) — G2 amended by user decision
+Dispatcher deadline sweep NOT ported (user: launch without). Compensating
+controls: (a) launcher's built-in 8-attempt auto-resume loop from last
+checkpoint (interval already 5 steps — max ~5 steps redone per wedge);
+(b) advisor-loop stall detection (no step progress outside eval barriers
+=> restart via tmux); (c) PRIME_RL_ROLLOUT_TIMEOUT_S exported but known
+unconsumed on this runtime (documented no-op). Wedge risk accepted as
+recovery-cost, not run-loss.
