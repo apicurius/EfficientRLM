@@ -132,3 +132,13 @@ P-1..P-4 apply unchanged to the restarted run. S1 zero-invariance audit is
 unaffected (zero-neutralization unchanged). The first-5-free spot-check in the
 advisor loop is superseded: rollouts with S=0 should show cost == iterations;
 any S>0 rollout shows cost == iterations + 2*ln(1+S).
+
+### A1 code note (2026-07-17, post-launch)
+The operator implementation was simplified to the thresholdless registered form:
+the B parameter and the max(0, S-B) hinge were removed from
+_cost_iterations_ln_excess, _cost, and adaptive_group_advantage; the config's
+B kwarg was removed accordingly. Behavior is bit-identical to the launched
+configuration (B=0 made the hinge the identity; formula equivalence verified at
+S in {0,1,3,5,20,800} to machine precision, and the 9-test suite passes on the
+new form). The live process holds the launch-time code in memory; any auto-resume
+loads this simplified code with the matching config, computing the same numbers.

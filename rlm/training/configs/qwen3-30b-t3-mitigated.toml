@@ -98,7 +98,6 @@ gamma = 1.0
 min_span = 1.0
 cost_basis = "iterations_ln_excess"
 lam = 2.0
-B = 0
 zero_neutralize = true
 
 [orchestrator.train.env.args]
@@ -129,7 +128,6 @@ gamma = 1.0
 min_span = 1.0
 cost_basis = "iterations_ln_excess"
 lam = 2.0
-B = 0
 zero_neutralize = true
 
 [orchestrator.train.env.args]

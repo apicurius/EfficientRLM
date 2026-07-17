@@ -69,23 +69,24 @@ def _cost_iterations_subcalls(trace: Any) -> float:
     return _metric(trace, "rlm_iterations") + _metric(trace, "rlm_sub_llm_calls")
 
 
-def _cost_iterations_ln_excess(trace: Any, *, lam: float = 2.0, B: float = 5.0) -> float:
-    """Turns + natural-log-damped EXCESS sub-LLM volume above budget ``B``.
+def _cost_iterations_ln_excess(trace: Any, *, lam: float = 2.0) -> float:
+    """Turns + natural-log-damped sub-LLM volume, weighted by ``lam``.
 
-    ``cost = I + lam * ln(1 + max(0, S - B))`` (log1p in code). The registered
-    mitigation basis: sub-calls up to the productive band ``B`` are unpriced,
-    only excess volume is penalized, log-compressed. Pairs with
+    ``cost = I + lam * ln(1 + S)`` (log1p in code). The registered mitigation
+    basis (PREREG Amendment A1): iterations carry the serial depth, the log
+    term prices delegation volume, and ``lam`` balances the two terms' dynamic
+    ranges (span-matching calibration; lam=2). Pairs with
     ``zero_neutralize=True`` so abstinence (S==0) stays advantage-neutral while
-    productive delegators still compete.
+    delegators still compete on cost.
 
-    ``lam``/``B`` thread from the config's advantage kwargs, the same path as
-    ``beta_max``/``solve_floor`` (defaults lam=2.0, B=5).
+    ``lam`` threads from the config's advantage kwargs, the same path as
+    ``beta_max``/``solve_floor``.
     """
-    excess = max(0.0, _metric(trace, "rlm_sub_llm_calls") - B)
-    return _metric(trace, "rlm_iterations") + lam * math.log1p(excess)
+    calls = _metric(trace, "rlm_sub_llm_calls")
+    return _metric(trace, "rlm_iterations") + lam * math.log1p(calls)
 
 
-# Bases carrying tunable parameters (lam, B) rather than a bare (trace) signature.
+# Bases carrying a tunable parameter (lam) rather than a bare (trace) signature.
 # ``_cost`` routes them explicitly so the config's kwargs reach the cost function.
 _PARAMETRIC_COST_BASES = frozenset({"iterations_ln_excess"})
 
@@ -99,9 +100,9 @@ _COST_BASES = {
 DEFAULT_COST_BASIS = "iterations_log_subcalls"
 
 
-def _cost(trace: Any, cost_basis: str = DEFAULT_COST_BASIS, *, lam: float = 2.0, B: float = 5.0) -> float:
+def _cost(trace: Any, cost_basis: str = DEFAULT_COST_BASIS, *, lam: float = 2.0) -> float:
     if cost_basis == "iterations_ln_excess":
-        return _cost_iterations_ln_excess(trace, lam=lam, B=B)
+        return _cost_iterations_ln_excess(trace, lam=lam)
     return _COST_BASES[cost_basis](trace)
 
 
@@ -151,7 +152,6 @@ def adaptive_group_advantage(
     cost_basis: str = DEFAULT_COST_BASIS,
     min_span: float = 0.0,
     lam: float = 2.0,
-    B: float = 5.0,
     zero_neutralize: bool = False,
 ) -> AdvantageOutputs:
     """Validity-gated, group-mean-centered advantage.
@@ -163,8 +163,8 @@ def adaptive_group_advantage(
     term, so the reward style is the only shaping (no double shaping).
 
     cost_basis selects the scaffold-cost definition for the re-ranking (one of
-    _COST_BASES); all are scaffold-action costs, never tokens. ``lam``/``B`` only
-    affect the parametric ``iterations_ln_excess`` basis (defaults lam=2.0, B=5).
+    _COST_BASES); all are scaffold-action costs, never tokens. ``lam`` only
+    affects the parametric ``iterations_ln_excess`` basis (default lam=2.0).
 
     zero_neutralize (default False): after min-max normalization over valid
     siblings, every valid zero-subcall (S==0) member inherits the mean penalty of
@@ -188,7 +188,7 @@ def adaptive_group_advantage(
     correct = [_correct(t) for t in traces]
     valid = [c > 0.0 and not _fatal(t) for t, c in zip(traces, correct)]
     solve_rate = sum(1.0 for v in valid if v) / len(valid)
-    costs = [_cost(t, cost_basis, lam=lam, B=B) for t in traces]
+    costs = [_cost(t, cost_basis, lam=lam) for t in traces]
     normalized_cost = [0.0] * len(traces)
 
     if base == "reward":

@@ -105,13 +105,12 @@ def test_zero_members_are_advantage_neutral_across_sweep():
         fatal = [t.stop_condition == "max_turns" for t in factory()]
         for beta in (0.05, 0.15, 0.30):
             for lam in (1.0, 2.0, 3.713):
-                for B in (3, 5, 8):
-                    out = _adv(factory, beta_max=beta, lam=lam, B=B, solve_floor=0.25, **NEW)
+                    out = _adv(factory, beta_max=beta, lam=lam, solve_floor=0.25, **NEW)
                     for i, (s, g, f) in enumerate(zip(subs, gated, fatal)):
                         valid = g > 0.0 and not f
                         if valid and s == 0.0:
                             assert abs(out[i] - ref[i]) < 1e-9, (
-                                f"{name} beta={beta} lam={lam} B={B} member {i}: "
+                                f"{name} beta={beta} lam={lam} member {i}: "
                                 f"abstainer dA {out[i]} != beta0 {ref[i]}"
                             )
 
@@ -126,37 +125,34 @@ def test_zero_neutralization_actually_fires_and_reranks_delegators():
         _trace(gated=0.0, has_final=False, stop="max_turns"),
     ]
     ref = _adv(factory, base="correctness", beta_max=0.0)
-    out = _adv(factory, beta_max=0.15, lam=2.0, B=5, **NEW)
+    out = _adv(factory, beta_max=0.15, lam=2.0, **NEW)
     assert abs(out[0] - ref[0]) < 1e-9          # abstainer neutral
     assert out[0] > out[1]                       # delegator ranked below abstainer
     assert out[1] < ref[1]                       # delegator genuinely penalized (fired)
 
 
 # --------------------------------------------------------------------------
-# (b) BUDGET-FREENESS: sub-calls within [0, B] are unpriced.
+# (b) EXACT FORM: cost equals I + lam*ln(1+S) at every S (Amendment A1).
 # --------------------------------------------------------------------------
-def test_ln_excess_cost_is_flat_within_budget():
-    base = _cost_iterations_ln_excess(_trace(gated=1.0, iters=7.0, subcalls=0.0), lam=2.0, B=5)
-    for s in range(0, 6):  # S in {0..5}, B=5 -> excess 0
-        c = _cost_iterations_ln_excess(_trace(gated=1.0, iters=7.0, subcalls=float(s)), lam=2.0, B=5)
-        assert c == base == 7.0
-    # first call above budget IS priced.
-    above = _cost_iterations_ln_excess(_trace(gated=1.0, iters=7.0, subcalls=6.0), lam=2.0, B=5)
-    assert above == pytest.approx(7.0 + 2.0 * math.log1p(1.0))
+def test_ln_excess_cost_matches_registered_formula():
+    for s_calls in (0.0, 1.0, 3.0, 5.0, 20.0, 800.0):
+        c = _cost_iterations_ln_excess(_trace(gated=1.0, iters=7.0, subcalls=s_calls), lam=2.0)
+        assert c == pytest.approx(7.0 + 2.0 * math.log1p(s_calls))
+    # S == 0 pays nothing beyond iterations.
+    assert _cost_iterations_ln_excess(_trace(gated=1.0, iters=7.0, subcalls=0.0), lam=2.0) == 7.0
 
 
-def test_within_budget_siblings_get_identical_advantage():
-    # Two valid members differ ONLY in S within budget; a third heavy delegator
-    # makes the group fire. The two in-budget members must be tied.
+def test_cost_ordering_follows_delegation_volume():
+    # Valid members differing only in S must rank strictly by S under the
+    # thresholdless basis: fewer calls -> lower cost -> higher advantage.
     factory = lambda: [
-        _trace(gated=1.0, iters=6.0, subcalls=1.0),   # in-budget
-        _trace(gated=1.0, iters=6.0, subcalls=4.0),   # in-budget (same cost)
-        _trace(gated=1.0, iters=6.0, subcalls=30.0),  # excess -> priced, fires group
+        _trace(gated=1.0, iters=6.0, subcalls=1.0),   # lightest delegator
+        _trace(gated=1.0, iters=6.0, subcalls=4.0),   # light delegator
+        _trace(gated=1.0, iters=6.0, subcalls=30.0),  # heavy delegator
         _trace(gated=0.0, has_final=False, stop="max_turns"),
     ]
-    out = _adv(factory, beta_max=0.15, lam=2.0, B=5, **NEW)
-    assert out[0] == out[1]        # identical cost -> identical advantage
-    assert out[0] > out[2]         # both outrank the excess delegator
+    out = _adv(factory, beta_max=0.15, lam=2.0, **NEW)
+    assert out[0] > out[1] > out[2]  # strictly ordered by delegation volume
 
 
 # --------------------------------------------------------------------------
@@ -170,7 +166,7 @@ def test_every_valid_correct_outranks_every_invalid():
         _trace(gated=0.0, has_final=False, stop="max_turns"),   # invalid
         _trace(gated=1.0, stop="max_turns"),                    # correct-looking but fatal -> invalid
     ]
-    out = _adv(factory, beta_max=0.15, lam=2.0, B=5, solve_floor=0.25, **NEW)
+    out = _adv(factory, beta_max=0.15, lam=2.0, solve_floor=0.25, **NEW)
     valid_advs = [out[0], out[1], out[2]]
     invalid_advs = [out[3], out[4]]
     assert min(valid_advs) > max(invalid_advs)
@@ -186,7 +182,7 @@ def test_beta_zero_reduces_to_gated_correctness():
         _trace(gated=0.0, has_final=False, stop="max_turns"),
         _trace(gated=0.0, has_final=False, stop="max_turns"),
     ]
-    out = _adv(factory, beta_max=0.0, lam=2.0, B=5, **NEW)
+    out = _adv(factory, beta_max=0.0, lam=2.0, **NEW)
     assert out == _centered([1.0, 1.0, 0.0, 0.0])
 
 
@@ -198,7 +194,7 @@ def test_below_solve_floor_no_shaping_under_new_basis():
         _trace(gated=0.0, has_final=False, stop="max_turns"),
         _trace(gated=0.0, has_final=False, stop="max_turns"),
     ]
-    out = _adv(factory, beta_max=0.15, lam=2.0, B=5, solve_floor=0.25, **NEW)
+    out = _adv(factory, beta_max=0.15, lam=2.0, solve_floor=0.25, **NEW)
     assert out == _centered([1.0, 0.0, 0.0, 0.0])
 
 
@@ -213,14 +209,14 @@ def test_new_basis_is_registered_and_unknown_still_raises():
         _adv(lambda: [_trace(gated=1.0), _trace(gated=1.0)], cost_basis="bogus_basis")
 
 
-def test_lam_and_B_thread_from_kwargs_into_cost_telemetry():
-    # adaptive_cost telemetry must reflect I + lam*ln(1+(S-B)+) for delegators.
+def test_lam_threads_from_kwargs_into_cost_telemetry():
+    # adaptive_cost telemetry must reflect I + lam*ln(1+S) for every rollout.
     factory = lambda: [
         _trace(gated=1.0, iters=4.0, subcalls=0.0),
         _trace(gated=1.0, iters=4.0, subcalls=25.0),
         _trace(gated=0.0, has_final=False, stop="max_turns"),
     ]
     traces = factory()
-    adaptive_group_advantage(AdvantageInputs(rollouts=traces), beta_max=0.15, lam=2.0, B=5, **NEW)
-    assert traces[0].metrics["adaptive_cost"] == pytest.approx(4.0)  # abstainer: excess 0
-    assert traces[1].metrics["adaptive_cost"] == pytest.approx(4.0 + 2.0 * math.log1p(20.0))
+    adaptive_group_advantage(AdvantageInputs(rollouts=traces), beta_max=0.15, lam=2.0, **NEW)
+    assert traces[0].metrics["adaptive_cost"] == pytest.approx(4.0)  # abstainer pays iterations only
+    assert traces[1].metrics["adaptive_cost"] == pytest.approx(4.0 + 2.0 * math.log1p(25.0))
