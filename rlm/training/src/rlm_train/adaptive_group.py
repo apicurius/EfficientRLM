@@ -69,16 +69,39 @@ def _cost_iterations_subcalls(trace: Any) -> float:
     return _metric(trace, "rlm_iterations") + _metric(trace, "rlm_sub_llm_calls")
 
 
+def _cost_iterations_ln_excess(trace: Any, *, lam: float = 2.0, B: float = 5.0) -> float:
+    """Turns + natural-log-damped EXCESS sub-LLM volume above budget ``B``.
+
+    ``cost = I + lam * ln(1 + max(0, S - B))`` (log1p in code). The registered
+    mitigation basis: sub-calls up to the productive band ``B`` are unpriced,
+    only excess volume is penalized, log-compressed. Pairs with
+    ``zero_neutralize=True`` so abstinence (S==0) stays advantage-neutral while
+    productive delegators still compete.
+
+    ``lam``/``B`` thread from the config's advantage kwargs, the same path as
+    ``beta_max``/``solve_floor`` (defaults lam=2.0, B=5).
+    """
+    excess = max(0.0, _metric(trace, "rlm_sub_llm_calls") - B)
+    return _metric(trace, "rlm_iterations") + lam * math.log1p(excess)
+
+
+# Bases carrying tunable parameters (lam, B) rather than a bare (trace) signature.
+# ``_cost`` routes them explicitly so the config's kwargs reach the cost function.
+_PARAMETRIC_COST_BASES = frozenset({"iterations_ln_excess"})
+
 _COST_BASES = {
     "iterations": _cost_iterations,
     "iterations_log_subcalls": _cost_iterations_log_subcalls,
     "iterations_log_helpers": _cost_iterations_log_helpers,
     "iterations_subcalls": _cost_iterations_subcalls,
+    "iterations_ln_excess": _cost_iterations_ln_excess,
 }
 DEFAULT_COST_BASIS = "iterations_log_subcalls"
 
 
-def _cost(trace: Any, cost_basis: str = DEFAULT_COST_BASIS) -> float:
+def _cost(trace: Any, cost_basis: str = DEFAULT_COST_BASIS, *, lam: float = 2.0, B: float = 5.0) -> float:
+    if cost_basis == "iterations_ln_excess":
+        return _cost_iterations_ln_excess(trace, lam=lam, B=B)
     return _COST_BASES[cost_basis](trace)
 
 
@@ -127,6 +150,9 @@ def adaptive_group_advantage(
     gamma: float = 1.0,
     cost_basis: str = DEFAULT_COST_BASIS,
     min_span: float = 0.0,
+    lam: float = 2.0,
+    B: float = 5.0,
+    zero_neutralize: bool = False,
 ) -> AdvantageOutputs:
     """Validity-gated, group-mean-centered advantage.
 
@@ -137,7 +163,18 @@ def adaptive_group_advantage(
     term, so the reward style is the only shaping (no double shaping).
 
     cost_basis selects the scaffold-cost definition for the re-ranking (one of
-    _COST_BASES); all are scaffold-action costs, never tokens.
+    _COST_BASES); all are scaffold-action costs, never tokens. ``lam``/``B`` only
+    affect the parametric ``iterations_ln_excess`` basis (defaults lam=2.0, B=5).
+
+    zero_neutralize (default False): after min-max normalization over valid
+    siblings, every valid zero-subcall (S==0) member inherits the mean penalty of
+    its delegating siblings, ``qz = sum(p over valid delegating) / (n - m)`` where
+    ``n`` is the FULL group size and ``m`` the count of valid zero-call members.
+    Under the operator's group-SIZE centering this makes each abstaining member's
+    advantage EXACTLY its beta=0 value (abstinence advantage-neutral) while
+    delegators still compete on cost. All-valid-zero groups get no shaping (q=0).
+    This transform has no tail_only-style counterpart in this operator, so the
+    prereg's mutual-exclusivity guard is vacuous here (nothing to exclude).
     """
     if base not in {"correctness", "reward"}:
         raise ValueError(f"Unknown base: {base!r}")
@@ -151,7 +188,7 @@ def adaptive_group_advantage(
     correct = [_correct(t) for t in traces]
     valid = [c > 0.0 and not _fatal(t) for t, c in zip(traces, correct)]
     solve_rate = sum(1.0 for v in valid if v) / len(valid)
-    costs = [_cost(t, cost_basis) for t in traces]
+    costs = [_cost(t, cost_basis, lam=lam, B=B) for t in traces]
     normalized_cost = [0.0] * len(traces)
 
     if base == "reward":
@@ -167,9 +204,25 @@ def adaptive_group_advantage(
                 lo, hi = min(valid_costs), max(valid_costs)
                 span = hi - lo
                 if span > 0.0 and span >= min_span:
-                    for i in valid_idx:
-                        normalized_cost[i] = (costs[i] - lo) / span
-                        shaped[i] = 1.0 - beta * normalized_cost[i]
+                    p = {i: (costs[i] - lo) / span for i in valid_idx}
+                    if zero_neutralize:
+                        n = len(traces)
+                        subs = [_metric(t, "rlm_sub_llm_calls") for t in traces]
+                        zero_idx = [i for i in valid_idx if subs[i] == 0.0]
+                        deleg_idx = [i for i in valid_idx if subs[i] > 0.0]
+                        m = len(zero_idx)
+                        if deleg_idx:
+                            qz = sum(p[i] for i in deleg_idx) / (n - m)
+                            for i in valid_idx:
+                                q = qz if subs[i] == 0.0 else p[i]
+                                normalized_cost[i] = q
+                                shaped[i] = 1.0 - beta * q
+                        # else: all valid members abstain -> no delegating sibling to
+                        # price against; leave q=0 (normalized_cost 0.0, shaped=correct).
+                    else:
+                        for i in valid_idx:
+                            normalized_cost[i] = p[i]
+                            shaped[i] = 1.0 - beta * p[i]
 
     baseline = sum(shaped) / len(shaped)
     advantages = [x - baseline for x in shaped]
