@@ -253,3 +253,38 @@ computable-from-dumps cells (V0/V3/V4 references + zero-neutralized C_LH
 with frozen λ) — the waste family (C_PT/C_RW) requires a new env telemetry
 channel (rlm/training scope) and enters via offline validation before the
 pilot. Instrument extension in progress; decision data still pending (tar).
+
+## ADDENDUM 4 (2026-07-17) — decision-pass re-review: APPROVE-WITH-CHANGES
+
+Adversarial re-review of the decision-pass winner (zero-neutralized
+C_LH_B5) returned APPROVE-WITH-CHANGES: approved as the A-PRIORI canary
+candidate, not an empirically unique winner. Required changes before the
+pilot: (1) recompute selection metrics on candidate-independent support
+(common fired-set) with within-group paired band contrasts + CI on
+cost_pres; (2) B5-specific zero-member counts and >=1e-9 assertion
+comparator; (3) fix the decision artifact's provenance label (says
+"pre-collapse", is 120-200; 80-file coverage accounted); (4) paired
+zero-neutralized symmetric-vs-tail_only ablation before expansion;
+(5) C_PT = separately calibrated challenger with its own frozen lambda and
+decision pass (no automatic upgrade); (6) no sub-token coefficient at
+launch (monitored separately). Confirmed correct: the groupsize-m
+denominator; sub-token omission.
+
+LAMBDA POLICY (resolved; user objection + re-review convergent): lambda is
+FROZEN within a run (1.8564 for the first canary). The span-matching rule
+runs in SHADOW as a monitoring gate: shadow value outside the tested
+[0.928, 3.713] range => STOP, re-freeze a newly registered lambda,
+restart. Never an in-run adaptive reward change — an in-run lambda(t) makes
+the objective policy-influenceable (spans are under the policy's control),
+recreating the feedback class that caused the original collapse. The
+measured +47% cross-regime drift (1.856 -> 2.728) is the evidence the
+shadow gate is necessary.
+
+Six prereg rules supplied verbatim by the re-review (artifact gate, offline
+launch gate with six CI-bound conditions, zero-invariance abort,
+frozen-lambda/shadow rule, two-consecutive-window canary expansion rule,
+C_PT upgrade gates) — to be transcribed into the PREREG document at
+sign-off. TRAINING-LENGTH POLICY (user question, answered): do not cut at
+120 (tests nothing about the fix); canary stop rule is the budget
+mechanism; checkpoint selection by canary-clean argmax; 160 = floor under a
+hard budget cap.
