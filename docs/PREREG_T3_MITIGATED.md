@@ -192,8 +192,13 @@ Registered now to preclude post-hoc repetition-shopping optics.
 
 The offline evaluation reports, per suite and per policy, in addition to the
 existing D_ops set (mean iterations, mean sub-calls, p95 scaffold cost, fatal
-rate): sub-call p95, sub-call maximum, and the share of rollouts exceeding 300
-sub-calls. Rationale: the deployment motivation (ch01) is the delegation tail
+rate): sub-call quantiles p90/p95/p99 and maximum (no fixed threshold — the
+distribution reported as such, with the CCDF figure carrying the full shape),
+plus one relative share: the fraction of rollouts exceeding the BASE policy's
+per-suite sub-call p95 ("share above the untrained model's own worst 5%").
+The base-relative threshold is task-calibrated and carries no arbitrary
+constant; a single fixed cutoff cannot serve suites whose base p95 differs by
+an order of magnitude (trec 3,209 vs BC+ 378 in the existing data). Rationale: the deployment motivation (ch01) is the delegation tail
 specifically; the scaffold-cost p95 under-expresses it because the log term
 compresses extreme sub-call counts (a 16,722-call rollout and a 494-call rollout
 differ by ~3.5 cost units). Registered before any t3 offline result exists;
