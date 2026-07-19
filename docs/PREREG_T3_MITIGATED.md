@@ -167,3 +167,23 @@ rule to (i) a per-boundary DESCRIPTIVE line (point + 95% CI + n, reported at
 accumulated full-run qualifying pairs (expected n ~ 25-30), failing only if the
 95% CI excludes zero on the negative side. S3 continues to govern conditions
 1,2,3,5,6 unchanged. Artifacts: outputs/advisor/gate_t3_79/.
+
+## Amendment A3 (2026-07-19, step ~87, pre-outcome, USER-RATIFIED): expanded offline replication on the contract environments
+
+Registered BEFORE any t3 offline result exists. The post-run offline evaluation
+expands replication where the no-regression ruling is decided:
+
+- CONTRACT ENVIRONMENTS (OOLONG-trec, BrowseComp+): SIX independent repetitions
+  for t3-final and control-final (was three). Expected effect: per-cell clustered
+  SE shrinks from ~0.06 to ~0.04, difference SE from ~0.08 to ~0.055, giving the
+  eps=0.05 no-regression margin a decision band comparable to its own width.
+- Transfer suites (CodeQA, OOLONG-Pairs) and all other policies (base, released,
+  step-120 checkpoints): three repetitions, unchanged.
+- Protocol otherwise identical: one machine, one serving stack, same env configs,
+  same scorers, pooled with question-clustered SEs. Runtime re-measured for ALL
+  policies in the same pass (ai16 scale; studio-era absolute times not spliced).
+
+Rationale: control's contract-env cells (.500 trec, .431 BC+) are consistent
+across existing reps (not single-rep luck: trec per-rep .52/.46/.52), so the
+binding constraint on the ruling is difference-SE, not point instability.
+Registered now to preclude post-hoc repetition-shopping optics.
