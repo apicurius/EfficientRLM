@@ -142,3 +142,28 @@ configuration (B=0 made the hinge the identity; formula equivalence verified at
 S in {0,1,3,5,20,800} to machine precision, and the 9-test suite passes on the
 new form). The live process holds the launch-time code in memory; any auto-resume
 loads this simplified code with the matching config, computing the same numbers.
+
+## S3 adjudication and Amendment A2 (2026-07-19, step-80 boundary, USER-RATIFIED)
+
+At the step-80 window gate (steps 1-79, canonical variant: 563 complete groups,
+18.8% partial-group prune disclosed, frozen lambda=2 enforced), S3 FIRED on
+condition 4 alone: prod_vs_zero_paired point -0.0053, bootstrap CI
+[-0.0216, +0.0105], n=11 qualifying pairs. Conditions 1,2,3,5,6 PASSED with
+margins; shadow-lambda 1.5453 inside [0.93, 3.71] (S2 PASS).
+
+RULING (user-ratified, canary-conditioned as pre-agreed): CONTINUE. Grounds:
+(a) condition 4 is a point-sign rule on n=11 whose CI contains the value it was
+registered as passing with (+0.010, itself with a zero-crossing CI at n=7);
+(b) the mechanism guarantee it proxies (abstention never advantaged) is enforced
+bit-exactly by the every-step zero-invariance audit, unviolated across ~2,600
+rollouts; (c) the independent transfer canary printed CLEAR at the same boundary
+(delegation share flat at .28 for three consecutive prints, accuracy .40
+joint-best, benign zero-sub phenotype), and all BC+ tripwires cleared with
+best-ever accuracy.
+
+AMENDMENT A2: condition 4 is reformulated from a per-boundary point-sign stop
+rule to (i) a per-boundary DESCRIPTIVE line (point + 95% CI + n, reported at
+100/120/140/160/180), and (ii) a single registered RULING at step 200 on the
+accumulated full-run qualifying pairs (expected n ~ 25-30), failing only if the
+95% CI excludes zero on the negative side. S3 continues to govern conditions
+1,2,3,5,6 unchanged. Artifacts: outputs/advisor/gate_t3_79/.
