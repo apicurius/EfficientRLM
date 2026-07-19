@@ -187,3 +187,18 @@ Rationale: control's contract-env cells (.500 trec, .431 BC+) are consistent
 across existing reps (not single-rep luck: trec per-rep .52/.46/.52), so the
 binding constraint on the ruling is difference-SE, not point instability.
 Registered now to preclude post-hoc repetition-shopping optics.
+
+## Amendment A4 (2026-07-19, pre-outcome): sub-call tail metrics join the offline reporting set
+
+The offline evaluation reports, per suite and per policy, in addition to the
+existing D_ops set (mean iterations, mean sub-calls, p95 scaffold cost, fatal
+rate): sub-call p95, sub-call maximum, and the share of rollouts exceeding 300
+sub-calls. Rationale: the deployment motivation (ch01) is the delegation tail
+specifically; the scaffold-cost p95 under-expresses it because the log term
+compresses extreme sub-call counts (a 16,722-call rollout and a 494-call rollout
+differ by ~3.5 cost units). Registered before any t3 offline result exists;
+applies to every policy in the pass (base, released, control, t3, step-120
+checkpoints) so the released policy's tail (trec p95 3,593, max 16,722 in the
+existing three-rep data) is reported on the same footing. Thesis surface:
+tbl:res-tail gains these rows (or a companion sub-call tail table) at population
+time; the CCDF figure (fig:tail-ccdf) already visualizes the full distributions.
