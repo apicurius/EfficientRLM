@@ -231,3 +231,34 @@ Pre-committed adjudication for step 120 and after:
    and formal promotion of the delegation floor in the next-run design.
    Any malignant marker (cap rising, accuracy below base, REPL work absent)
    -> stopping becomes the default recommendation put to the user.
+
+## Amendment A5 — S4 step-140 fire: documented-continue ratified; canary claim rescoped (2026-07-20)
+
+S4 FIRED at the step-140 eval: canary delegation share printed 0.16 < 0.20
+(4/25 delegating). Per the S4 adjudication annex, training continued while the
+pre-named evidence panel was assembled:
+
+1. Zero-sub phenotype: 21/25 zero-sub; median 9 iterations / 9 REPL calls
+   (active every turn); 20/21 finalized; zero-sub accuracy .48. BENIGN.
+2. Canary accuracy vs base: .48 vs .40 — second-best print of the run
+   (trajectory .40 → .52 → .48 while delegation went .24 → .16); canary cost
+   11.56 < base 12.84. BENIGN.
+3. BC+ coupling: acc .40 (in-band), delegation .36 — no joint-collapse
+   signature. BENIGN.
+
+USER RULING (2026-07-20, "confirm as soon as benign"): documented-continue
+RATIFIED. Standing delegation recorded: future S4 fires whose evidence panel
+reads all-benign resolve to documented-continue without a fresh user gate;
+any malignant marker (canary accuracy at/below base with suppressed
+delegation, non-finalizing zero-sub phenotype, or BC+ joint sag) escalates
+loudly and awaits the user. Training never stops without explicit user
+confirmation regardless.
+
+CLAIM RESCOPE (pre-committed in the annex for the all-benign branch): the
+delegation-preservation claim changes from "canary delegation share remains
+>= 0.20" to "transfer capability is preserved under strategy substitution" —
+evidenced by canary accuracy at or above base at every boundary plus the
+benign phenotype panel. Delegation share continues to be reported
+descriptively at every boundary; the 0.20 letter remains armed solely as the
+panel trigger. The original claim's failure under its letter is disclosed,
+not erased.
