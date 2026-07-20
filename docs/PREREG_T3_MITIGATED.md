@@ -207,3 +207,27 @@ checkpoints) so the released policy's tail (trec p95 3,593, max 16,722 in the
 existing three-rep data) is reported on the same footing. Thesis surface:
 tbl:res-tail gains these rows (or a companion sub-call tail table) at population
 time; the CCDF figure (fig:tail-ccdf) already visualizes the full distributions.
+
+## S4 adjudication annex (2026-07-20, written BEFORE the step-120 print; USER-DIRECTED)
+
+Context: the canary delegating share reached exactly 0.20 at step 100 — the fire
+threshold's boundary value (chosen as t2's terminal share) — with the benign
+phenotype at its strongest (zero-sub rollouts: 12 REPL iterations median, cap
+0.05, accuracy 0.40 = canary joint-best; both contract-env evals at run records).
+The share rule and the pathology it proxies have visibly decoupled.
+
+Pre-committed adjudication for step 120 and after:
+1. The letter stands: a print below 0.20 FIRES S4. No post-hoc reinterpretation
+   of the threshold.
+2. FIRING NEVER STOPS TRAINING AUTOMATICALLY. A fired rule = loud escalation
+   (terminal + push notification) and continued training while the user
+   adjudicates. Training stops ONLY on explicit user confirmation (standing
+   user directive, 2026-07-20).
+3. The adjudication evidence is pre-named: (a) zero-sub phenotype panel
+   (iterations / REPL activity / cap rate), (b) canary accuracy vs base,
+   (c) BC+ delegation-share coupling. All-benign -> expected ruling is
+   documented-continue with the claim-4 rescope (delegation SHARE not
+   preserved on far transfer; delegation CAPABILITY and accuracy preserved)
+   and formal promotion of the delegation floor in the next-run design.
+   Any malignant marker (cap rising, accuracy below base, REPL work absent)
+   -> stopping becomes the default recommendation put to the user.
