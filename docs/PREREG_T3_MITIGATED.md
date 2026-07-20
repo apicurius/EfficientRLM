@@ -262,3 +262,28 @@ benign phenotype panel. Delegation share continues to be reported
 descriptively at every boundary; the 0.20 letter remains armed solely as the
 panel trigger. The original claim's failure under its letter is disclosed,
 not erased.
+
+## Adjudication note A6 — second S4 fire, malignant markers, user-ruled continue (2026-07-20)
+
+Step-160 eval: canary delegation 0.08 (< 0.20, second S4 fire, deeper than
+step-140's 0.16) with canary accuracy 0.40 (= base), BC+ 0.32, trec 0.36 —
+three-suite co-decline. A5 malignant markers audited as PRESENT (canary
+at-base accuracy with suppressed delegation; BC+ joint sag; partial
+finalization degradation). Per the annex, the fire escalated loudly and the
+decision was put to the user with the full evidence panel and an external
+(Codex) mitigation adjudication.
+
+USER RULING (verbatim intent): "continue, do not stop — n=25 is noise."
+Documented-continue to step 200. Statistical basis acknowledged in the
+record: each suite's paired decline is individually noise-compatible
+(sign tests p ≈ 0.17–0.19); the co-movement shares one checkpoint and is
+confounded with checkpoint wobble. The mechanism-shaped BC+ evidence and
+monotone delegation trends are recorded as the adverse interpretation.
+
+Standing consequences: the malignant panel repeats unchanged at 180 and 200;
+a fourth consecutive paired BC+ decline crosses significance and is reported
+as such; the campaign adds t3@120-or-140 as a disclosed secondary vintage
+(labeling per the recorded external ruling) alongside the pre-committed
+step-200 primary; the claim narrows per the recorded template if the decline
+persists; no mid-run changes of any kind; training stops only on explicit
+user instruction.
